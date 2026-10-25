@@ -1,0 +1,101 @@
+name: pr-tests
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  select:
+    name: select changed test targets
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.select.outputs.matrix }}
+      empty: ${{ steps.select.outputs.empty }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Map diff to tests
+        id: select
+        env:
+          BASE_REF: origin/${{ github.base_ref }}
+        run: |
+          python scripts/ci/changed_tests.py --base "$BASE_REF" --json > selected.json
+          cat selected.json
+          python - <<'PY'
+          import json, os
+          data = json.load(open("selected.json", encoding="utf-8"))
+          targets = data["targets"]
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
+              out.write(f"empty={'false' if targets else 'true'}\n")
+              out.write("matrix=" + json.dumps({"target": targets}) + "\n")
+          PY
+
+  size:
+    name: pr size
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 5 to 20 files
+        run: python scripts/ci/pr_size.py --base "origin/${{ github.base_ref }}"
+
+  tests:
+    name: tests (${{ matrix.target }})
+    needs: select
+    if: needs.select.outputs.empty == 'false'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.select.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Test changed module
+        run: python -m pytest "${{ matrix.target }}" -q
+
+      - name: Lint
+        run: python -m ruff check src tests scripts
+
+  summary:
+    name: pr-tests summary
+    needs: [select, size, tests]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report
+        run: |
+          echo "selection: ${{ needs.select.result }}"
+          echo "size:      ${{ needs.size.result }}"
+          echo "tests:     ${{ needs.tests.result }}"
+          test "${{ needs.size.result }}" = "success"
+          test "${{ needs.tests.result }}" != "failure"
+          test "${{ needs.tests.result }}" != "cancelled"

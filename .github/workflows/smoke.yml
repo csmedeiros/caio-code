@@ -1,0 +1,44 @@
+name: smoke
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cross-platform:
+    name: smoke (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      # Everything goes through the Makefile, the same entry point a developer
+      # uses — a smoke test that bypasses `make` would not test the documented
+      # path.
+      - name: Setup
+        run: make setup-ci
+
+      - name: Smoke
+        run: make smoke
+
+      - name: Git hooks are installable
+        run: make hooks

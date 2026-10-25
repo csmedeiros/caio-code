@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Ambiente e segredos
+.env
+.env.*
+!.env.example
+
+# Sessões e saídas efêmeras
+.reports/session-end/*.json
+.reports/session-end/*.log
+.reports/session-end/*.md
+!.reports/session-end/.gitkeep
+.reports/bugs/.tmp/
+
+# Editores e sistemas
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Worktrees locais do Claude Code
+.claude/worktrees/
+.claude/scheduled_tasks.lock

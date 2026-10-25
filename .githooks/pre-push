@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# Enforces two rules from CLAUDE.md §5:
+#   1. no direct push to main — everything goes through a pull request;
+#   2. the branch must be up to date with the base it targets
+#      (origin/main for the first PR, the branch below it for a stacked PR).
+#
+# Escape hatch: `git push --no-verify` exists, but a rejected push is a
+# finding about the branch, not an obstacle to bypass.
+
+set -uo pipefail
+
+remote="${1:-origin}"
+current="$(git symbolic-ref --short HEAD 2>/dev/null || echo "(detached)")"
+
+if [ "$current" = "main" ] || [ "$current" = "master" ]; then
+  echo "pre-push: direct push to '$current' is blocked." >&2
+  echo "pre-push: create a branch and open a PR (make stack-new NAME=slug CARD=CM-n)." >&2
+  exit 1
+fi
+
+if [ "$current" = "(detached)" ]; then
+  echo "pre-push: detached HEAD; switch to a branch before pushing." >&2
+  exit 1
+fi
+
+base=""
+if command -v gh >/dev/null 2>&1; then
+  base="$(gh pr view --json baseRefName -q .baseRefName 2>/dev/null || true)"
+fi
+if [ -z "$base" ]; then
+  base="$(git config "branch.$current.merge" 2>/dev/null | sed 's#^refs/heads/##')"
+fi
+[ -z "$base" ] && base="main"
+
+git fetch --quiet "$remote" "$base" 2>/dev/null || true
+
+if git rev-parse --verify --quiet "origin/$base" >/dev/null 2>&1; then
+  target="origin/$base"
+elif git rev-parse --verify --quiet "$base" >/dev/null 2>&1; then
+  target="$base"
+else
+  echo "pre-push: cannot resolve base branch '$base'." >&2
+  echo "pre-push: fetch it first, or set the PR base with gh." >&2
+  exit 1
+fi
+
+if ! git merge-base --is-ancestor "$target" HEAD; then
+  behind="$(git rev-list --count "HEAD..$target" 2>/dev/null || echo '?')"
+  echo "pre-push: '$current' is $behind commit(s) behind '$target'." >&2
+  echo "pre-push: run  git fetch $remote && git rebase $target" >&2
+  echo "pre-push: resolve conflicts, re-run 'make test-changed', then push." >&2
+  exit 1
+fi
+
+echo "pre-push: '$current' is up to date with '$target'."
+exit 0
