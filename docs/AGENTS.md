@@ -14,6 +14,14 @@ Documentação de processo e decisões. O código explica o *que*; aqui fica o *
 Formato: `NNNN-titulo-curto.md`, com `Status`, `Contexto`, `Decisão`, `Consequências` e
 `Alternativas descartadas`. Uma página. O ADR registra a decisão, não a discussão.
 
+| ADR | Decisão |
+|---|---|
+| `0001-estrutura-em-camadas.md` | `cli → harness → folhas` (superado por 0002/0003; mantido por histórico) |
+| `0002-deepagents-como-loop.md` | deepagents/LangChain como loop; a tese mede as políticas do middleware |
+| `0003-camadas-ddd.md` | camadas DDD, regra de dependência, decisões aplicadas por índice |
+| `0004-medicoes-do-experimento.md` | cauda verbatim sobre o custo real, structure repair no fim de todo pipeline, cache/custo do provedor |
+| `0005-modelo-de-decisao-typesafe.md` | Jev (TypeSafe) é modelo de decisão atrás de porta própria; seleção de mensagens por Noul; custo atribuído ao braço |
+
 ## Documentos
 
 | Arquivo | Conteúdo |

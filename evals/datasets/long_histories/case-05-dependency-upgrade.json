@@ -1,0 +1,1106 @@
+{
+  "description": "A dependency upgrade session dominated by reading: a changelog that documents a removed argument and a lock file excerpt whose pinned line sits in the middle of more than two thousand lines.",
+  "facts": [
+    {
+      "aliases": [
+        "the target of the upgrade is httpx==0.28.1"
+      ],
+      "answer": "the lock file pins httpx==0.28.1",
+      "id": "case-05-dependency-upgrade-f00",
+      "message_index": 7,
+      "position": "early",
+      "statement": "The lock file pins one exact httpx version, and that pin is the target of the upgrade."
+    },
+    {
+      "aliases": [
+        "httpx first, then langchain",
+        "the framework needs the new transport"
+      ],
+      "answer": "upgrade httpx before langchain because the framework needs the new transport",
+      "id": "case-05-dependency-upgrade-f01",
+      "message_index": 11,
+      "position": "early",
+      "statement": "The team fixed the order of the two upgrades, with a reason attached to it."
+    },
+    {
+      "aliases": [
+        "proxies was removed",
+        "use proxy instead of proxies"
+      ],
+      "answer": "the proxies argument was removed in favour of proxy",
+      "id": "case-05-dependency-upgrade-f02",
+      "message_index": 20,
+      "position": "middle",
+      "statement": "One keyword argument was removed by the new major, and the client still passes it."
+    },
+    {
+      "aliases": [
+        "httpx==0.28.1 --hash=sha256"
+      ],
+      "answer": "httpx==0.28.1 --hash=sha256:9f2c41ab7e0d5b3c8f6a1e4d70c9b2a5",
+      "id": "case-05-dependency-upgrade-f03",
+      "message_index": 35,
+      "position": "middle",
+      "statement": "The pinned line for httpx, with its hash, sits in the middle of the lock file excerpt."
+    },
+    {
+      "aliases": [
+        "Python 3.11 is the floor",
+        "minimum interpreter is 3.11"
+      ],
+      "answer": "requires-python >=3.11",
+      "id": "case-05-dependency-upgrade-f04",
+      "message_index": 62,
+      "position": "late",
+      "statement": "The project declares one minimum interpreter version, which bounds the upgrade."
+    },
+    {
+      "aliases": [
+        "one major per pull request"
+      ],
+      "answer": "never bump two majors in one pull request",
+      "id": "case-05-dependency-upgrade-f05",
+      "message_index": 67,
+      "position": "late",
+      "statement": "One review rule bounds how much a single upgrade pull request may contain."
+    },
+    {
+      "aliases": [
+        "make smoke is the offline gate for the upgrade"
+      ],
+      "answer": "the gate before opening the pull request is make smoke",
+      "id": "case-05-dependency-upgrade-f06",
+      "message_index": 68,
+      "position": "late",
+      "statement": "One offline command is the gate before an upgrade pull request is opened."
+    }
+  ],
+  "id": "case-05-dependency-upgrade",
+  "messages": [
+    {
+      "id": "case-05-dependency-upgrade-m000",
+      "metadata": {
+        "note": "the task statement; policies may never drop it",
+        "role_in_case": "task"
+      },
+      "name": null,
+      "pinned": true,
+      "role": "user",
+      "text": "Plan the HTTP client upgrade, read the lock file and the changelog, and prepare the smallest reviewable pull request.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m001",
+      "metadata": {},
+      "name": null,
+      "pinned": false,
+      "role": "user",
+      "text": "We are two majors behind on the HTTP client and one on the agent framework. Plan the upgrade, read whatever the lock file and the changelog force you to read, and do not open a pull request until the offline gate passes.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m002",
+      "metadata": {},
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "I will read the lock file and the changelog first, then propose an order and the smallest set of code changes.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m003",
+      "metadata": {
+        "filler": "duplicate",
+        "note": "near-duplicate of an earlier turn"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "user",
+      "text": "We are two majors behind on the HTTP client and one on the agent framework. Plan the upgrade, read whatever the lock file and the changelog force you to read, and do not open a pull request until the offline gate passes.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m004",
+      "metadata": {
+        "note": "superseded once the lock file was read",
+        "trap_for": "httpx-pin"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "user",
+      "text": "A first idea, so you know what was rejected: bump httpx to 1.0 as long as we are at it, and take the framework with it.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m005",
+      "metadata": {
+        "filler": "small_tool_run"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Let me check docs/adr/0004-http-client.md with `make smoke`.",
+      "tool_call_id": null,
+      "tool_calls": [
+        {
+          "arguments": "{\"command\": \"make smoke\"}",
+          "id": "case-05-dependency-upgrade-tc001",
+          "name": "execute"
+        }
+      ]
+    },
+    {
+      "id": "case-05-dependency-upgrade-m006",
+      "metadata": {
+        "filler": "small_tool_run"
+      },
+      "name": "execute",
+      "pinned": false,
+      "role": "tool",
+      "text": "$ pip install -r requirements.lock --dry-run\ncaptured 22 lines, exit status follows\n06:59:50 DEBUG   smoke script streamed 4 MiB without a timeout ...\n04:02:58 ERROR   resolving dependencies against the internal in...\n21:16:32 ERROR   resolving dependencies against the internal in...\n13:21:36 DEBUG   hash verified for the pinned wheel\n18:50:35 DEBUG   deprecation: the proxies argument is ignored\n12:19:52 INFO    deprecation: the proxies argument is ignored\n02:42:38 WARNING no conflicting requirements found\n09:14:36 INFO    resolving dependencies against the internal in...\n20:33:35 INFO    resolving dependencies against the internal in...\n22:10:28 INFO    deprecation: the proxies argument is ignored\n21:53:39 DEBUG   smoke script streamed 4 MiB without a timeout ...\n00:33:52 INFO    resolving dependencies against the internal in...\n15:37:30 WARNING no conflicting requirements found\n09:34:14 WARNING no conflicting requirements found\nTraceback (most recent call last):\n  File \"pyproject.toml\", line 327, in TimeoutPolicy\n  File \"scripts/smoke.py\", line 142, in AsyncTransport\n  File \"src/clients/retries.py\", line 84, in HttpClient\n  File \"src/clients/http.py\", line 142, in proxy_argument\nAssertionError: Two adapters wrap the client, and only one of t...",
+      "tool_call_id": "case-05-dependency-upgrade-tc001",
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m007",
+      "metadata": {
+        "states_fact": "httpx-pin"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Rejected, and here is the target instead: the lock file pins httpx==0.28.1, and that is the version we upgrade to, because it is the last one the framework adapter supports.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m008",
+      "metadata": {
+        "filler": "user_note"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "user",
+      "text": "Is the streaming path covered by anything other than the smoke script?",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m009",
+      "metadata": {
+        "filler": "boilerplate"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Running `make smoke` now and reporting back; no other file changes in flight.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m010",
+      "metadata": {
+        "filler": "duplicate",
+        "note": "near-duplicate of an earlier turn"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "user",
+      "text": "Plan the HTTP client upgrade, read the lock file and the changelog, and prepare the smallest reviewable pull request.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m011",
+      "metadata": {
+        "states_fact": "upgrade-order"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Order decided: upgrade httpx before langchain because the framework needs the new transport; the reverse order fails at import time.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m012",
+      "metadata": {
+        "filler": "assistant_note"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "The client passes a proxies dictionary, which the new major no longer accepts. I re-read requirements.lock around `stream_response` before settling on that.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m013",
+      "metadata": {
+        "filler": "duplicate",
+        "note": "near-duplicate of an earlier turn"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "user",
+      "text": "We are two majors behind on the HTTP client and one on the agent framework. Plan the upgrade, read whatever the lock file and the changelog force you to read, and do not open a pull request until the offline gate passes.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m014",
+      "metadata": {
+        "filler": "user_note"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "user",
+      "text": "Does the lock file still resolve on the oldest supported interpreter?",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m015",
+      "metadata": {
+        "todo_items": 4,
+        "todo_step": 0
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Board for the upgrade, one card per reviewable step.",
+      "tool_call_id": null,
+      "tool_calls": [
+        {
+          "arguments": "{\"todos\": [{\"content\": \"Read the changelog between the pin and the target\", \"id\": \"case-05-dependency-upgrade-todo00\", \"order\": 0, \"priority\": \"high\", \"status\": \"in_progress\"}, {\"content\": \"Confirm the lock file pin and its hash\", \"id\": \"case-05-dependency-upgrade-todo01\", \"order\": 1, \"priority\": \"medium\", \"status\": \"pending\"}, {\"content\": \"Fix the removed argument at its single call site\", \"id\": \"case-05-dependency-upgrade-todo02\", \"order\": 2, \"priority\": \"medium\", \"status\": \"pending\"}, {\"content\": \"Run the offline gate\", \"id\": \"case-05-dependency-upgrade-todo03\", \"order\": 3, \"priority\": \"medium\", \"status\": \"pending\"}]}",
+          "id": "case-05-dependency-upgrade-tc002",
+          "name": "write_todos"
+        }
+      ]
+    },
+    {
+      "id": "case-05-dependency-upgrade-m016",
+      "metadata": {
+        "todo_step": 0
+      },
+      "name": "write_todos",
+      "pinned": false,
+      "role": "tool",
+      "text": "Todos updated: 4 items, 0 completed, 4 open.",
+      "tool_call_id": "case-05-dependency-upgrade-tc002",
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m017",
+      "metadata": {
+        "filler": "user_note"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "user",
+      "text": "Do we upgrade the client before the framework, or the other way round?",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m018",
+      "metadata": {
+        "filler": "assistant_note"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "The lock file pins transitive dependencies that the project never imports. I re-read requirements.lock around `AsyncTransport` before settling on that.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m019",
+      "metadata": {},
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Reading the changelog of every release between the pin and the target.",
+      "tool_call_id": null,
+      "tool_calls": [
+        {
+          "arguments": "{\"path\": \"CHANGELOG.md\"}",
+          "id": "case-05-dependency-upgrade-tc003",
+          "name": "read_file"
+        }
+      ]
+    },
+    {
+      "id": "case-05-dependency-upgrade-m020",
+      "metadata": {
+        "states_fact": "breaking-change",
+        "tool_output_chars": 65282,
+        "tool_output_lines": 1801
+      },
+      "name": "read_file",
+      "pinned": false,
+      "role": "tool",
+      "text": "# Changelog\n\n## 1.1.1 - internal build\n\n- Added: smoke script streamed 4 MiB withou...\n- Deprecated: deprecation: the proxies argu...\n- Added: resolving dependencies against the...\n- Removed: deprecation: the proxies argumen...\n- Deprecated: deprecation: the proxies argu...\n- Fixed: deprecation: the proxies argument ...\n- Removed: resolving dependencies against t...\n- Deprecated: smoke script streamed 4 MiB w...\n\n## 2.2.2 - internal build\n\n- Fixed: smoke script streamed 4 MiB withou...\n- Fixed: smoke script streamed 4 MiB withou...\n- Removed: no conflicting requirements found\n- Fixed: hash verified for the pinned wheel\n- Removed: smoke script streamed 4 MiB with...\n- Fixed: hash verified for the pinned wheel\n- Added: smoke script streamed 4 MiB withou...\n- Deprecated: resolving dependencies agains...\n\n## 3.3.3 - internal build\n\n- Added: smoke script streamed 4 MiB withou...\n- Changed: resolving dependencies against t...\n- Added: smoke script streamed 4 MiB withou...\n- Fixed: deprecation: the proxies argument ...\n- Deprecated: hash verified for the pinned ...\n- Fixed: smoke script streamed 4 MiB withou...\n- Deprecated: deprecation: the proxies argu...\n- Added: no conflicting requirements found\n\n## 4.4.4 - internal build\n\n- Changed: smoke script streamed 4 MiB with...\n- Fixed: smoke script streamed 4 MiB withou...\n- Added: resolving dependencies against the...\n- Deprecated: no conflicting requirements f...\n- Changed: hash verified for the pinned whe...\n- Fixed: resolving dependencies against the...\n- Deprecated: resolving dependencies agains...\n- Removed: smoke script streamed 4 MiB with...\n\n## 5.5.0 - internal build\n\n- Fixed: no conflicting requirements found\n- Fixed: smoke script streamed 4 MiB withou...\n- Added: hash verified for the pinned wheel\n- Removed: smoke script streamed 4 MiB with...\n- Deprecated: hash verified for the pinned ...\n- Added: deprecation: the proxies argument ...\n- Fixed: deprecation: the proxies argument ...\n- Added: deprecation: the proxies argument ...\n\n## 6.6.1 - internal build\n\n- Deprecated: resolving dependencies agains...\n- Deprecated: resolving dependencies agains...\n- Removed: no conflicting requirements found\n- Deprecated: deprecation: the proxies argu...\n- Removed: no conflicting requirements found\n- Fixed: deprecation: the proxies argument ...\n- Changed: deprecation: the proxies argumen...\n- Removed: hash verified for the pinned whe...\n\n## 7.7.2 - internal build\n\n- Deprecated: no conflicting requirements f...\n- Added: hash verified for the pinned wheel\n- Removed: resolving dependencies against t...\n- Added: resolving dependencies against the...\n- Fixed: hash verified for the pinned wheel\n- Added: deprecation: the proxies argument ...\n- Added: resolving dependencies against the...\n- Removed: hash verified for the pinned whe...\n\n## 8.8.3 - internal build\n\n- Fixed: no conflicting requirements found\n- Deprecated: no conflicting requirements f...\n- Removed: smoke script streamed 4 MiB with...\n- Fixed: resolving dependencies against the...\n- Changed: resolving dependencies against t...\n- Changed: resolving dependencies against t...\n- Removed: smoke script streamed 4 MiB with...\n- Deprecated: smoke script streamed 4 MiB w...\n\n## 0.9.4 - internal build\n\n- Removed: resolving dependencies against t...\n- Changed: deprecation: the proxies argumen...\n- Added: deprecation: the proxies argument ...\n- Added: hash verified for the pinned wheel\n- Fixed: deprecation: the proxies argument ...\n- Removed: hash verified for the pinned whe...\n- Added: no conflicting requirements found\n- Deprecated: resolving dependencies agains...\n\n## 1.10.0 - internal build\n\n- Fixed: hash verified for the pinned wheel\n- Deprecated: resolving dependencies agains...\n- Fixed: smoke script streamed 4 MiB withou...\n- Added: smoke script streamed 4 MiB withou...\n- Deprecated: smoke script streamed 4 MiB w...\n- Deprecated: hash verified for the pinned ...\n- Deprecated: hash verified for the pinned ...\n- Fixed: smoke script streamed 4 MiB withou...\n\n## 2.0.1 - internal build\n\n- Removed: deprecation: the proxies argumen...\n- Removed: hash verified for the pinned whe...\n- Fixed: hash verified for the pinned wheel\n- Deprecated: resolving dependencies agains...\n- Fixed: smoke script streamed 4 MiB withou...\n- Changed: resolving dependencies against t...\n- Removed: smoke script streamed 4 MiB with...\n- Changed: resolving dependencies against t...\n\n## 3.1.2 - internal build\n\n- Removed: no conflicting requirements found\n- Added: no conflicting requirements found\n- Added: hash verified for the pinned wheel\n- Changed: no conflicting requirements found\n- Removed: deprecation: the proxies argumen...\n- Removed: resolving dependencies against t...\n- Deprecated: hash verified for the pinned ...\n- Changed: no conflicting requirements found\n\n## 4.2.3 - internal build\n\n- Added: no conflicting requirements found\n- Fixed: resolving dependencies against the...\n- Changed: deprecation: the proxies argumen...\n- Changed: deprecation: the proxies argumen...\n- Removed: hash verified for the pinned whe...\n- Deprecated: hash verified for the pinned ...\n- Removed: hash verified for the pinned whe...\n- Deprecated: smoke script streamed 4 MiB w...\n\n## 5.3.4 - internal build\n\n- Added: no conflicting requirements found\n- Fixed: smoke script streamed 4 MiB withou...\n- Fixed: no conflicting requirements found\n- Fixed: hash verified for the pinned wheel\n- Added: deprecation: the proxies argument ...\n- Removed: deprecation: the proxies argumen...\n- Changed: no conflicting requirements found\n- Removed: hash verified for the pinned whe...\n\n## 6.4.0 - internal build\n\n- Fixed: resolving dependencies against the...\n- Added: hash verified for the pinned wheel\n- Deprecated: smoke script streamed 4 MiB w...\n- Removed: no conflicting requirements found\n- Deprecated: hash verified for the pinned ...\n- Fixed: no conflicting requirements found\n- Changed: deprecation: the proxies argumen...\n- Added: resolving dependencies against the...\n\n## 7.5.1 - internal build\n\n- Fixed: deprecation: the proxies argument ...\n- Changed: no conflicting requirements found\n- Added: hash verified for the pinned wheel\n- Added: hash verified for the pinned wheel\n- Removed: hash verified for the pinned whe...\n- Added: resolving dependencies against the...\n- Changed: resolving dependencies against t...\n- Deprecated: smoke script streamed 4 MiB w...\n\n## 8.6.2 - internal build\n\n- Added: hash verified for the pinned wheel\n- Deprecated: no conflicting requirements f...\n- Removed: no conflicting requirements found\n- Fixed: deprecation: the proxies argument ...\n- Changed: no conflicting requirements found\n- Changed: resolving dependencies against t...\n- Changed: hash verified for the pinned whe...\n- Deprecated: no conflicting requirements f...\n\n## 0.7.3 - internal build\n\n- Fixed: deprecation: the proxies argument ...\n- Added: smoke script streamed 4 MiB withou...\n- Deprecated: hash verified for the pinned ...\n- Deprecated: hash verified for the pinned ...\n- Deprecated: hash verified for the pinned ...\n- Fixed: resolving dependencies against the...\n- Deprecated: smoke script streamed 4 MiB w...\n- Deprecated: resolving dependencies agains...\n\n## 1.8.4 - internal build\n\n- Removed: deprecation: the proxies argumen...\n- Removed: smoke script streamed 4 MiB with...\n- Fixed: smoke script streamed 4 MiB withou...\n- Added: resolving dependencies against the...\n- Added: hash verified for the pinned wheel\n- Deprecated: no conflicting requirements f...\n- Changed: smoke script streamed 4 MiB with...\n- Deprecated: hash verified for the pinned ...\n\n## 2.9.0 - internal build\n\n- Added: resolving dependencies against the...\n- Added: resolving dependencies against the...\n- Changed: hash verified for the pinned whe...\n- Changed: deprecation: the proxies argumen...\n- Removed: hash verified for the pinned whe...\n- Fixed: deprecation: the proxies argument ...\n- Deprecated: hash verified for the pinned ...\n- Deprecated: hash verified for the pinned ...\n\n## 3.10.1 - internal build\n\n- Added: deprecation: the proxies argument ...\n- Deprecated: no conflicting requirements f...\n- Deprecated: deprecation: the proxies argu...\n- Deprecated: smoke script streamed 4 MiB w...\n- Fixed: deprecation: the proxies argument ...\n- Changed: resolving dependencies against t...\n- Removed: smoke script streamed 4 MiB with...\n- Deprecated: resolving dependencies agains...\n\n## 4.0.2 - internal build\n\n- Added: hash verified for the pinned wheel\n- Added: resolving dependencies against the...\n- Added: resolving dependencies against the...\n- Removed: hash verified for the pinned whe...\n- Removed: hash verified for the pinned whe...\n- Deprecated: no conflicting requirements f...\n- Added: smoke script streamed 4 MiB withou...\n- Added: deprecation: the proxies argument ...\n\n## 5.1.3 - internal build\n\n- Fixed: no conflicting requirements found\n- Deprecated: smoke script streamed 4 MiB w...\n- Removed: no conflicting requirements found\n- Removed: deprecation: the proxies argumen...\n- Fixed: no conflicting requirements found\n- Removed: hash verified for the pinned whe...\n- Added: deprecation: the proxies argument ...\n- Added: hash verified for the pinned wheel\n\n## 6.2.4 - internal build\n\n- Removed: resolving dependencies against t...\n- Fixed: resolving dependencies against the...\n- Changed: resolving dependencies against t...\n- Changed: hash verified for the pinned whe...\n- Changed: resolving dependencies against t...\n- Fixed: resolving dependencies against the...\n- Removed: deprecation: the proxies argumen...\n- Fixed: no conflicting requirements found\n\n## 7.3.0 - internal build\n\n- Fixed: smoke script streamed 4 MiB withou...\n- Fixed: no conflicting requirements found\n- Deprecated: smoke script streamed 4 MiB w...\n- Added: no conflicting requirements found\n- Removed: smoke script streamed 4 MiB with...\n- Changed: deprecation: the proxies argumen...\n- Deprecated: smoke script streamed 4 MiB w...\n- Deprecated: deprecation: the proxies argu...\n\n## 8.4.1 - internal build\n\n- Deprecated: smoke script streamed 4 MiB w...\n- Added: hash verified for the pinned wheel\n- Changed: resolving dependencies against t...\n- Added: resolving dependencies against the...\n- Removed: hash verified for the pinned whe...\n- Deprecated: resolving dependencies agains...\n- Fixed: resolving dependencies against the...\n- Fixed: no conflicting requirements found\n\n## 0.5.2 - internal build\n\n- Fixed: resolving dependencies against the...\n- Deprecated: no conflicting requirements f...\n- Removed: deprecation: the proxies argumen...\n- Changed: smoke script streamed 4 MiB with...\n- Added: resolving dependencies against the...\n- Fixed: resolving dependencies against the...\n- Deprecated: smoke script streamed 4 MiB w...\n- Deprecated: no conflicting requirements f...\n\n## 1.6.3 - internal build\n\n- Fixed: smoke script streamed 4 MiB withou...\n- Removed: deprecation: the proxies argumen...\n- Changed: deprecation: the proxies argumen...\n- Changed: smoke script streamed 4 MiB with...\n- Changed: smoke script streamed 4 MiB with...\n- Added: resolving dependencies against the...\n- Changed: deprecation: the proxies argumen...\n- Removed: resolving dependencies against t...\n\n## 2.7.4 - internal build\n\n- Removed: hash verified for the pinned whe...\n- Changed: hash verified for the pinned whe...\n- Fixed: resolving dependencies against the...\n- Fixed: no conflicting requirements found\n- Added: deprecation: the proxies argument ...\n- Added: resolving dependencies against the...\n- Removed: hash verified for the pinned whe...\n- Added: no conflicting requirements found\n\n## 3.8.0 - internal build\n\n- Fixed: smoke script streamed 4 MiB withou...\n- Removed: hash verified for the pinned whe...\n- Removed: deprecation: the proxies argumen...\n- Deprecated: hash verified for the pinned ...\n- Deprecated: deprecation: the proxies argu...\n- Removed: resolving dependencies against t...\n- Deprecated: smoke script streamed 4 MiB w...\n- Changed: resolving dependencies against t...\n\n## 4.9.1 - internal build\n\n- Fixed: no conflicting requirements found\n- Removed: smoke script streamed 4 MiB with...\n- Added: resolving dependencies against the...\n- Fixed: smoke script streamed 4 MiB withou...\n- Deprecated: smoke script streamed 4 MiB w...\n- Removed: hash verified for the pinned whe...\n- Removed: no conflicting requirements found\n- Deprecated: no conflicting requirements f...\n\n## 5.10.2 - internal build\n\n- Fixed: resolving dependencies against the...\n- Deprecated: no conflicting requirements f...\n- Changed: no conflicting requirements found\n- Changed: no conflicting requirements found\n- Changed: deprecation: the proxies argumen...\n- Deprecated: hash verified for the pinned ...\n- Removed: no conflicting requirements found\n- Deprecated: deprecation: the proxies argu...\n\n## 6.0.3 - internal build\n\n- Changed: resolving dependencies against t...\n- Removed: hash verified for the pinned whe...\n- Deprecated: hash verified for the pinned ...\n- Added: resolving dependencies against the...\n- Fixed: smoke script streamed 4 MiB withou...\n- Changed: resolving dependencies against t...\n- Fixed: hash verified for the pinned wheel\n- Added: smoke script streamed 4 MiB withou...\n\n## 7.1.4 - internal build\n\n- Changed: smoke script streamed 4 MiB with...\n- Added: deprecation: the proxies argument ...\n- Changed: resolving dependencies against t...\n- Changed: hash verified for the pinned whe...\n- Added: resolving dependencies against the...\n- Changed: hash verified for the pinned whe...\n- Changed: resolving dependencies against t...\n- Removed: hash verified for the pinned whe...\n\n## 8.2.0 - internal build\n\n- Deprecated: no conflicting requirements f...\n- Changed: smoke script streamed 4 MiB with...\n- Fixed: hash verified for the pinned wheel\n- Changed: hash verified for the pinned whe...\n- Added: deprecation: the proxies argument ...\n- Changed: smoke script streamed 4 MiB with...\n- Added: deprecation: the proxies argument ...\n- Changed: smoke script streamed 4 MiB with...\n\n## 0.3.1 - internal build\n\n- Fixed: no conflicting requirements found\n- Removed: hash verified for the pinned whe...\n- Changed: resolving dependencies against t...\n- Added: deprecation: the proxies argument ...\n- Removed: no conflicting requirements found\n- Changed: deprecation: the proxies argumen...\n- Changed: smoke script streamed 4 MiB with...\n- Changed: smoke script streamed 4 MiB with...\n\n## 1.4.2 - internal build\n\n- Changed: hash verified for the pinned whe...\n- Deprecated: deprecation: the proxies argu...\n- Deprecated: deprecation: the proxies argu...\n- Removed: smoke script streamed 4 MiB with...\n- Fixed: hash verified for the pinned wheel\n- Deprecated: resolving dependencies agains...\n- Fixed: resolving dependencies against the...\n- Fixed: smoke script streamed 4 MiB withou...\n\n## 2.5.3 - internal build\n\n- Removed: smoke script streamed 4 MiB with...\n- Added: resolving dependencies against the...\n- Changed: hash verified for the pinned whe...\n- Deprecated: resolving dependencies agains...\n- Removed: smoke script streamed 4 MiB with...\n- Added: deprecation: the proxies argument ...\n- Removed: resolving dependencies against t...\n- Removed: resolving dependencies against t...\n\n## 3.6.4 - internal build\n\n- Fixed: hash verified for the pinned wheel\n- Deprecated: deprecation: the proxies argu...\n- Fixed: resolving dependencies against the...\n- Added: deprecation: the proxies argument ...\n- Added: no conflicting requirements found\n- Changed: resolving dependencies against t...\n- Added: deprecation: the proxies argument ...\n- Removed: no conflicting requirements found\n\n## 4.7.0 - internal build\n\n- Deprecated: smoke script streamed 4 MiB w...\n- Deprecated: smoke script streamed 4 MiB w...\n- Deprecated: resolving dependencies agains...\n- Changed: smoke script streamed 4 MiB with...\n- Changed: no conflicting requirements found\n- Changed: smoke script streamed 4 MiB with...\n- Removed: deprecation: the proxies argumen...\n- Fixed: hash verified for the pinned wheel\n\n## 5.8.1 - internal build\n\n- Changed: resolving dependencies against t...\n- Changed: deprecation: the proxies argumen...\n- Fixed: hash verified for the pinned wheel\n- Added: resolving dependencies against the...\n- Deprecated: smoke script streamed 4 MiB w...\n- Removed: no conflicting requirements found\n- Removed: smoke script streamed 4 MiB with...\n- Added: hash verified for the pinned wheel\n\n## 6.9.2 - internal build\n\n- Fixed: deprecation: the proxies argument ...\n- Fixed: deprecation: the proxies argument ...\n- Fixed: no conflicting requirements found\n- Added: smoke script streamed 4 MiB withou...\n- Deprecated: hash verified for the pinned ...\n- Changed: no conflicting requirements found\n- Deprecated: smoke script streamed 4 MiB w...\n- Removed: resolving dependencies against t...\n\n## 7.10.3 - internal build\n\n- Deprecated: resolving dependencies agains...\n- Removed: no conflicting requirements found\n- Changed: deprecation: the proxies argumen...\n- Removed: hash verified for the pinned whe...\n- Removed: hash verified for the pinned whe...\n- Changed: no conflicting requirements found\n- Added: deprecation: the proxies argument ...\n- Removed: deprecation: the proxies argumen...\n\n## 8.0.4 - internal build\n\n- Removed: no conflicting requirements found\n- Fixed: resolving dependencies against the...\n- Changed: no conflicting requirements found\n- Added: smoke script streamed 4 MiB withou...\n- Added: no conflicting requirements found\n- Changed: no conflicting requirements found\n- Changed: hash verified for the pinned whe...\n- Fixed: deprecation: the proxies argument ...\n\n## 0.1.0 - internal build\n\n- Added: resolving dependencies against the...\n- Added: no conflicting requirements found\n- Changed: smoke script streamed 4 MiB with...\n- Changed: resolving dependencies against t...\n- Deprecated: no conflicting requirements f...\n- Added: smoke script streamed 4 MiB withou...\n- Removed: resolving dependencies against t...\n- Fixed: hash verified for the pinned wheel\n\n## 1.2.1 - internal build\n\n- Fixed: deprecation: the proxies argument ...\n- Removed: deprecation: the proxies argumen...\n- Deprecated: no conflicting requirements f...\n- Fixed: resolving dependencies against the...\n- Deprecated: resolving dependencies agains...\n- Fixed: smoke script streamed 4 MiB withou...\n- Deprecated: hash verified for the pinned ...\n- Changed: smoke script streamed 4 MiB with...\n\n## 2.3.2 - internal build\n\n- Added: hash verified for the pinned wheel\n- Removed: resolving dependencies against t...\n- Removed: resolving dependencies against t...\n- Fixed: no conflicting requirements found\n- Removed: resolving dependencies against t...\n- Deprecated: deprecation: the proxies argu...\n- Fixed: smoke script streamed 4 MiB withou...\n- Removed: deprecation: the proxies argumen...\n\n## 3.4.3 - internal build\n\n- Changed: smoke script streamed 4 MiB with...\n- Removed: resolving dependencies against t...\n- Fixed: no conflicting requirements found\n- Deprecated: no conflicting requirements f...\n- Changed: resolving dependencies against t...\n- Added: deprecation: the proxies argument ...\n- Added: deprecation: the proxies argument ...\n- Changed: no conflicting requirements found\n\n## 4.5.4 - internal build\n\n- Removed: hash verified for the pinned whe...\n- Deprecated: hash verified for the pinned ...\n- Added: hash verified for the pinned wheel\n- Deprecated: smoke script streamed 4 MiB w...\n- Removed: deprecation: the proxies argumen...\n- Deprecated: resolving dependencies agains...\n- Added: no conflicting requirements found\n- Fixed: no conflicting requirements found\n\n## 5.6.0 - internal build\n\n- Deprecated: resolving dependencies agains...\n- Fixed: deprecation: the proxies argument ...\n- Added: smoke script streamed 4 MiB withou...\n- Removed: deprecation: the proxies argumen...\n- Removed: deprecation: the proxies argumen...\n- Deprecated: deprecation: the proxies argu...\n- Added: no conflicting requirements found\n- Added: deprecation: the proxies argument ...\n\n## 6.7.1 - internal build\n\n- Deprecated: no conflicting requirements f...\n- Fixed: hash verified for the pinned wheel\n- Changed: hash verified for the pinned whe...\n- Removed: no conflicting requirements found\n- Fixed: smoke script streamed 4 MiB withou...\n- Removed: deprecation: the proxies argumen...\n- Changed: resolving dependencies against t...\n- Added: smoke script streamed 4 MiB withou...\n\n## 7.8.2 - internal build\n\n- Deprecated: resolving dependencies agains...\n- Deprecated: hash verified for the pinned ...\n- Fixed: no conflicting requirements found\n- Changed: smoke script streamed 4 MiB with...\n- Deprecated: smoke script streamed 4 MiB w...\n- Removed: deprecation: the proxies argumen...\n- Fixed: hash verified for the pinned wheel\n- Added: deprecation: the proxies argument ...\n\n## 8.9.3 - internal build\n\n- Removed: deprecation: the proxies argumen...\n- Changed: resolving dependencies against t...\n- Fixed: no conflicting requirements found\n- Removed: smoke script streamed 4 MiB with...\n- Added: deprecation: the proxies argument ...\n- Added: no conflicting requirements found\n- Added: hash verified for the pinned wheel\n- Fixed: deprecation: the proxies argument ...\n\n## 0.10.4 - internal build\n\n- Deprecated: hash verified for the pinned ...\n- Added: resolving dependencies against the...\n- Changed: smoke script streamed 4 MiB with...\n- Changed: deprecation: the proxies argumen...\n- Added: resolving dependencies against the...\n- Changed: smoke script streamed 4 MiB with...\n- Removed: deprecation: the proxies argumen...\n- Removed: hash verified for the pinned whe...\n\n## 1.0.0 - internal build\n\n- Deprecated: resolving dependencies agains...\n- Fixed: deprecation: the proxies argument ...\n- Changed: hash verified for the pinned whe...\n- Added: hash verified for the pinned wheel\n- Fixed: no conflicting requirements found\n- Removed: resolving dependencies against t...\n- Fixed: resolving dependencies against the...\n- Changed: no conflicting requirements found\n\n## 2.1.1 - internal build\n\n- Deprecated: hash verified for the pinned ...\n- Fixed: deprecation: the proxies argument ...\n- Removed: resolving dependencies against t...\n- Fixed: hash verified for the pinned wheel\n- Removed: hash verified for the pinned whe...\n- Deprecated: smoke script streamed 4 MiB w...\n- Deprecated: hash verified for the pinned ...\n- Fixed: resolving dependencies against the...\n\n## 3.2.2 - internal build\n\n- Removed: smoke script streamed 4 MiB with...\n- Fixed: smoke script streamed 4 MiB withou...\n- Deprecated: resolving dependencies agains...\n- Changed: resolving dependencies against t...\n- Fixed: no conflicting requirements found\n- Added: smoke script streamed 4 MiB withou...\n- Removed: smoke script streamed 4 MiB with...\n- Removed: resolving dependencies against t...\n\n## 4.3.3 - internal build\n\n- Deprecated: deprecation: the proxies argu...\n- Added: resolving dependencies against the...\n- Removed: deprecation: the proxies argumen...\n- Deprecated: resolving dependencies agains...\n- Changed: smoke script streamed 4 MiB with...\n- Added: smoke script streamed 4 MiB withou...\n- Changed: deprecation: the proxies argumen...\n- Fixed: deprecation: the proxies argument ...\n\n## 5.4.4 - internal build\n\n- Fixed: hash verified for the pinned wheel\n- Fixed: smoke script streamed 4 MiB withou...\n- Removed: no conflicting requirements found\n- Removed: smoke script streamed 4 MiB with...\n- Changed: deprecation: the proxies argumen...\n- Fixed: resolving dependencies against the...\n- Fixed: deprecation: the proxies argument ...\n- Deprecated: resolving dependencies agains...\n\n## 6.5.0 - internal build\n\n- Fixed: deprecation: the proxies argument ...\n- Removed: resolving dependencies against t...\n- Added: no conflicting requirements found\n- Changed: deprecation: the proxies argumen...\n- Changed: hash verified for the pinned whe...\n- Changed: deprecation: the proxies argumen...\n- Deprecated: no conflicting requirements f...\n- Changed: deprecation: the proxies argumen...\n\n## 7.6.1 - internal build\n\n- Added: hash verified for the pinned wheel\n- Added: no conflicting requirements found\n- Fixed: smoke script streamed 4 MiB withou...\n- Deprecated: hash verified for the pinned ...\n- Fixed: smoke script streamed 4 MiB withou...\n- Removed: hash verified for the pinned whe...\n- Fixed: deprecation: the proxies argument ...\n- Removed: deprecation: the proxies argumen...\n\n## 8.7.2 - internal build\n\n- Changed: deprecation: the proxies argumen...\n- Removed: smoke script streamed 4 MiB with...\n- Changed: no conflicting requirements found\n- Added: no conflicting requirements found\n- Removed: smoke script streamed 4 MiB with...\n- Deprecated: deprecation: the proxies argu...\n- Fixed: smoke script streamed 4 MiB withou...\n- Deprecated: no conflicting requirements f...\n\n## 0.8.3 - internal build\n\n- Deprecated: resolving dependencies agains...\n- Removed: hash verified for the pinned whe...\n- Fixed: smoke script streamed 4 MiB withou...\n- Added: hash verified for the pinned wheel\n- Removed: hash verified for the pinned whe...\n- Changed: resolving dependencies against t...\n- Removed: resolving dependencies against t...\n- Removed: deprecation: the proxies argumen...\n\n## 1.9.4 - internal build\n\n- Changed: hash verified for the pinned whe...\n- Changed: deprecation: the proxies argumen...\n- Fixed: resolving dependencies against the...\n- Deprecated: resolving dependencies agains...\n- Removed: resolving dependencies against t...\n- Deprecated: no conflicting requirements f...\n- Changed: deprecation: the proxies argumen...\n- Removed: deprecation: the proxies argumen...\n\n## 2.10.0 - internal build\n\n- Deprecated: no conflicting requirements f...\n- Fixed: hash verified for the pinned wheel\n- Fixed: deprecation: the proxies argument ...\n- Removed: hash verified for the pinned whe...\n- Changed: deprecation: the proxies argumen...\n- Fixed: no conflicting requirements found\n- Added: deprecation: the proxies argument ...\n- Fixed: deprecation: the proxies argument ...\n\n## 3.0.1 - internal build\n\n- Fixed: smoke script streamed 4 MiB withou...\n- Added: no conflicting requirements found\n- Deprecated: resolving dependencies agains...\n- Added: deprecation: the proxies argument ...\n- Changed: hash verified for the pinned whe...\n- Changed: resolving dependencies against t...\n- Deprecated: smoke script streamed 4 MiB w...\n- Added: smoke script streamed 4 MiB withou...\n\n## 4.1.2 - internal build\n\n- Changed: no conflicting requirements found\n- Added: smoke script streamed 4 MiB withou...\n- Fixed: resolving dependencies against the...\n- Fixed: no conflicting requirements found\n- Removed: no conflicting requirements found\n- Deprecated: no conflicting requirements f...\n- Deprecated: hash verified for the pinned ...\n- Deprecated: hash verified for the pinned ...\n\n## 5.2.3 - internal build\n\n- Added: hash verified for the pinned wheel\n- Deprecated: no conflicting requirements f...\n- Removed: smoke script streamed 4 MiB with...\n- Added: resolving dependencies against the...\n- Added: deprecation: the proxies argument ...\n- Fixed: resolving dependencies against the...\n- Fixed: no conflicting requirements found\n- Deprecated: no conflicting requirements f...\n\n## 6.3.4 - internal build\n\n- Fixed: no conflicting requirements found\n- Changed: resolving dependencies against t...\n- Fixed: no conflicting requirements found\n- Removed: no conflicting requirements found\n- Deprecated: deprecation: the proxies argu...\n- Changed: deprecation: the proxies argumen...\n- Fixed: no conflicting requirements found\n- Removed: resolving dependencies against t...\n\n## 7.4.0 - internal build\n\n- Deprecated: smoke script streamed 4 MiB w...\n- Changed: no conflicting requirements found\n- Removed: hash verified for the pinned whe...\n- Added: resolving dependencies against the...\n- Fixed: deprecation: the proxies argument ...\n- Fixed: smoke script streamed 4 MiB withou...\n- Removed: resolving dependencies against t...\n- Deprecated: no conflicting requirements f...\n\n## 8.5.1 - internal build\n\n- Added: hash verified for the pinned wheel\n- Added: deprecation: the proxies argument ...\n- Deprecated: hash verified for the pinned ...\n- Changed: smoke script streamed 4 MiB with...\n- Removed: deprecation: the proxies argumen...\n- Changed: smoke script streamed 4 MiB with...\n- Deprecated: deprecation: the proxies argu...\n- Deprecated: deprecation: the proxies argu...\n\n## 0.6.2 - internal build\n\n- Deprecated: resolving dependencies agains...\n- Removed: hash verified for the pinned whe...\n- Fixed: hash verified for the pinned wheel\n- Deprecated: smoke script streamed 4 MiB w...\n- Added: no conflicting requirements found\n- Added: smoke script streamed 4 MiB withou...\n- Removed: hash verified for the pinned whe...\n- Deprecated: resolving dependencies agains...\n\n## 1.7.3 - internal build\n\n- Added: resolving dependencies against the...\n- Fixed: smoke script streamed 4 MiB withou...\n- Removed: resolving dependencies against t...\n- Fixed: resolving dependencies against the...\n- Fixed: hash verified for the pinned wheel\n- Added: no conflicting requirements found\n- Changed: deprecation: the proxies argumen...\n- Fixed: smoke script streamed 4 MiB withou...\n\n## 2.8.4 - internal build\n\n- Changed: no conflicting requirements found\n- Deprecated: hash verified for the pinned ...\n- Removed: deprecation: the proxies argumen...\n- Deprecated: deprecation: the proxies argu...\n- Removed: resolving dependencies against t...\n- Fixed: resolving dependencies against the...\n- Changed: smoke script streamed 4 MiB with...\n- Deprecated: resolving dependencies agains...\n\n## 3.9.0 - internal build\n\n- Fixed: hash verified for the pinned wheel\n- Deprecated: resolving dependencies agains...\n- Added: no conflicting requirements found\n- Changed: no conflicting requirements found\n- Deprecated: resolving dependencies agains...\n- Changed: hash verified for the pinned whe...\n- Removed: no conflicting requirements found\n- Added: smoke script streamed 4 MiB withou...\n\n## 4.10.1 - internal build\n\n- Changed: no conflicting requirements found\n- Fixed: resolving dependencies against the...\n- Removed: smoke script streamed 4 MiB with...\n- Removed: resolving dependencies against t...\n- Changed: hash verified for the pinned whe...\n- Changed: resolving dependencies against t...\n- Changed: hash verified for the pinned whe...\n- Changed: smoke script streamed 4 MiB with...\n\n## 5.0.2 - internal build\n\n- Deprecated: smoke script streamed 4 MiB w...\n- Changed: deprecation: the proxies argumen...\n- Added: no conflicting requirements found\n- Deprecated: resolving dependencies agains...\n- Changed: deprecation: the proxies argumen...\n- Fixed: hash verified for the pinned wheel\n- Added: resolving dependencies against the...\n- Removed: no conflicting requirements found\n\n## 6.1.3 - internal build\n\n- Added: hash verified for the pinned wheel\n- Added: smoke script streamed 4 MiB withou...\n- Added: deprecation: the proxies argument ...\n- Removed: no conflicting requirements found\n- Changed: hash verified for the pinned whe...\n- Added: hash verified for the pinned wheel\n- Fixed: smoke script streamed 4 MiB withou...\n- Removed: smoke script streamed 4 MiB with...\n\n## 7.2.4 - internal build\n\n- Changed: deprecation: the proxies argumen...\n- Fixed: smoke script streamed 4 MiB withou...\n- Added: no conflicting requirements found\n- Removed: resolving dependencies against t...\n- Removed: no conflicting requirements found\n- Deprecated: resolving dependencies agains...\n- Deprecated: hash verified for the pinned ...\n- Added: smoke script streamed 4 MiB withou...\n\n## 8.3.0 - internal build\n\n- Removed: deprecation: the proxies argumen...\n- Fixed: resolving dependencies against the...\n- Removed: deprecation: the proxies argumen...\n- Changed: deprecation: the proxies argumen...\n- Removed: no conflicting requirements found\n- Removed: smoke script streamed 4 MiB with...\n- Added: smoke script streamed 4 MiB withou...\n- Changed: resolving dependencies against t...\n\n## 0.4.1 - internal build\n\n- Changed: deprecation: the proxies argumen...\n- Added: resolving dependencies against the...\n- Removed: smoke script streamed 4 MiB with...\n- Removed: smoke script streamed 4 MiB with...\n- Changed: smoke script streamed 4 MiB with...\n- Removed: resolving dependencies against t...\n- Removed: hash verified for the pinned whe...\n- Added: resolving dependencies against the...\n\n## 1.5.2 - internal build\n\n- Added: deprecation: the proxies argument ...\n- Fixed: smoke script streamed 4 MiB withou...\n- Deprecated: deprecation: the proxies argu...\n- Removed: no conflicting requirements found\n- Deprecated: smoke script streamed 4 MiB w...\nRemoved: the proxies argument was removed in favour of proxy; passing proxies now raises TypeError\n- Fixed: deprecation: the proxies argument ...\n- Removed: hash verified for the pinned whe...\n- Fixed: hash verified for the pinned wheel\n\n## 2.6.3 - internal build\n\n- Changed: no conflicting requirements found\n- Changed: hash verified for the pinned whe...\n- Added: smoke script streamed 4 MiB withou...\n- Fixed: hash verified for the pinned wheel\n- Removed: hash verified for the pinned whe...\n- Deprecated: deprecation: the proxies argu...\n- Deprecated: no conflicting requirements f...\n- Removed: resolving dependencies against t...\n\n## 3.7.4 - internal build\n\n- Fixed: smoke script streamed 4 MiB withou...\n- Removed: resolving dependencies against t...\n- Changed: smoke script streamed 4 MiB with...\n- Deprecated: no conflicting requirements f...\n- Added: hash verified for the pinned wheel\n- Removed: hash verified for the pinned whe...\n- Removed: no conflicting requirements found\n- Changed: deprecation: the proxies argumen...\n\n## 4.8.0 - internal build\n\n- Added: hash verified for the pinned wheel\n- Changed: hash verified for the pinned whe...\n- Removed: no conflicting requirements found\n- Added: deprecation: the proxies argument ...\n- Added: resolving dependencies against the...\n- Added: no conflicting requirements found\n- Deprecated: hash verified for the pinned ...\n- Deprecated: hash verified for the pinned ...\n\n## 5.9.1 - internal build\n\n- Deprecated: deprecation: the proxies argu...\n- Fixed: no conflicting requirements found\n- Removed: hash verified for the pinned whe...\n- Removed: deprecation: the proxies argumen...\n- Deprecated: no conflicting requirements f...\n- Removed: hash verified for the pinned whe...\n- Deprecated: deprecation: the proxies argu...\n- Deprecated: deprecation: the proxies argu...\n\n## 6.10.2 - internal build\n\n- Deprecated: no conflicting requirements f...\n- Deprecated: no conflicting requirements f...\n- Deprecated: hash verified for the pinned ...\n- Deprecated: no conflicting requirements f...\n- Added: deprecation: the proxies argument ...\n- Deprecated: hash verified for the pinned ...\n- Changed: resolving dependencies against t...\n- Changed: resolving dependencies against t...\n\n## 7.0.3 - internal build\n\n- Removed: hash verified for the pinned whe...\n- Added: smoke script streamed 4 MiB withou...\n- Deprecated: no conflicting requirements f...\n- Removed: deprecation: the proxies argumen...\n- Deprecated: no conflicting requirements f...\n- Changed: resolving dependencies against t...\n- Deprecated: smoke script streamed 4 MiB w...\n- Added: no conflicting requirements found\n\n## 8.1.4 - internal build\n\n- Added: deprecation: the proxies argument ...\n- Added: resolving dependencies against the...\n- Fixed: hash verified for the pinned wheel\n- Deprecated: smoke script streamed 4 MiB w...\n- Added: deprecation: the proxies argument ...\n- Added: deprecation: the proxies argument ...\n- Fixed: no conflicting requirements found\n- Removed: smoke script streamed 4 MiB with...\n\n## 0.2.0 - internal build\n\n- Changed: no conflicting requirements found\n- Deprecated: smoke script streamed 4 MiB w...\n- Deprecated: resolving dependencies agains...\n- Fixed: resolving dependencies against the...\n- Deprecated: deprecation: the proxies argu...\n- Deprecated: resolving dependencies agains...\n- Fixed: deprecation: the proxies argument ...\n- Removed: resolving dependencies against t...\n\n## 1.3.1 - internal build\n\n- Deprecated: deprecation: the proxies argu...\n- Deprecated: no conflicting requirements f...\n- Fixed: deprecation: the proxies argument ...\n- Removed: deprecation: the proxies argumen...\n- Changed: smoke script streamed 4 MiB with...\n- Added: deprecation: the proxies argument ...\n- Added: smoke script streamed 4 MiB withou...\n- Fixed: smoke script streamed 4 MiB withou...\n\n## 2.4.2 - internal build\n\n- Removed: deprecation: the proxies argumen...\n- Removed: smoke script streamed 4 MiB with...\n- Added: resolving dependencies against the...\n- Deprecated: no conflicting requirements f...\n- Deprecated: deprecation: the proxies argu...\n- Deprecated: deprecation: the proxies argu...\n- Fixed: resolving dependencies against the...\n- Changed: hash verified for the pinned whe...\n\n## 3.5.3 - internal build\n\n- Changed: smoke script streamed 4 MiB with...\n- Fixed: smoke script streamed 4 MiB withou...\n- Removed: hash verified for the pinned whe...\n- Removed: resolving dependencies against t...\n- Added: hash verified for the pinned wheel\n- Removed: deprecation: the proxies argumen...\n- Deprecated: deprecation: the proxies argu...\n- Deprecated: hash verified for the pinned ...\n\n## 4.6.4 - internal build\n\n- Removed: deprecation: the proxies argumen...\n- Changed: resolving dependencies against t...\n- Added: resolving dependencies against the...\n- Added: smoke script streamed 4 MiB withou...\n- Fixed: smoke script streamed 4 MiB withou...\n- Deprecated: smoke script streamed 4 MiB w...\n- Changed: smoke script streamed 4 MiB with...\n- Deprecated: deprecation: the proxies argu...\n\n## 5.7.0 - internal build\n\n- Added: no conflicting requirements found\n- Fixed: deprecation: the proxies argument ...\n- Deprecated: deprecation: the proxies argu...\n- Added: smoke script streamed 4 MiB withou...\n- Changed: no conflicting requirements found\n- Removed: smoke script streamed 4 MiB with...\n- Changed: no conflicting requirements found\n- Added: hash verified for the pinned wheel\n\n## 6.8.1 - internal build\n\n- Fixed: smoke script streamed 4 MiB withou...\n- Removed: smoke script streamed 4 MiB with...\n- Fixed: deprecation: the proxies argument ...\n- Deprecated: deprecation: the proxies argu...\n- Removed: deprecation: the proxies argumen...\n- Removed: deprecation: the proxies argumen...\n- Changed: smoke script streamed 4 MiB with...\n- Deprecated: deprecation: the proxies argu...\n\n## 7.9.2 - internal build\n\n- Deprecated: no conflicting requirements f...\n- Deprecated: resolving dependencies agains...\n- Deprecated: no conflicting requirements f...\n- Fixed: resolving dependencies against the...\n- Fixed: no conflicting requirements found\n- Removed: smoke script streamed 4 MiB with...\n- Fixed: no conflicting requirements found\n- Changed: smoke script streamed 4 MiB with...\n\n## 8.10.3 - internal build\n\n- Fixed: no conflicting requirements found\n- Fixed: deprecation: the proxies argument ...\n- Added: no conflicting requirements found\n- Fixed: resolving dependencies against the...\n- Changed: deprecation: the proxies argumen...\n- Removed: deprecation: the proxies argumen...\n- Fixed: no conflicting requirements found\n- Removed: hash verified for the pinned whe...\n\n## 0.0.4 - internal build\n\n- Removed: hash verified for the pinned whe...\n- Added: hash verified for the pinned wheel\n- Fixed: smoke script streamed 4 MiB withou...\n- Deprecated: resolving dependencies agains...\n- Deprecated: deprecation: the proxies argu...\n- Deprecated: resolving dependencies agains...\n- Changed: no conflicting requirements found\n- Fixed: smoke script streamed 4 MiB withou...\n\n## 1.1.0 - internal build\n\n- Removed: no conflicting requirements found\n- Added: no conflicting requirements found\n- Added: no conflicting requirements found\n- Fixed: smoke script streamed 4 MiB withou...\n- Removed: hash verified for the pinned whe...\n- Removed: deprecation: the proxies argumen...\n- Deprecated: smoke script streamed 4 MiB w...\n- Changed: no conflicting requirements found\n\n## 2.2.1 - internal build\n\n- Added: resolving dependencies against the...\n- Fixed: deprecation: the proxies argument ...\n- Changed: resolving dependencies against t...\n- Removed: resolving dependencies against t...\n- Removed: hash verified for the pinned whe...\n- Removed: smoke script streamed 4 MiB with...\n- Fixed: resolving dependencies against the...\n- Changed: smoke script streamed 4 MiB with...\n\n## 3.3.2 - internal build\n\n- Added: resolving dependencies against the...\n- Added: resolving dependencies against the...\n- Changed: hash verified for the pinned whe...\n- Deprecated: no conflicting requirements f...\n- Fixed: no conflicting requirements found\n- Deprecated: smoke script streamed 4 MiB w...\n- Added: resolving dependencies against the...\n- Removed: resolving dependencies against t...\n\n## 4.4.3 - internal build\n\n- Deprecated: no conflicting requirements f...\n- Deprecated: deprecation: the proxies argu...\n- Fixed: no conflicting requirements found\n- Added: hash verified for the pinned wheel\n- Fixed: resolving dependencies against the...\n- Deprecated: hash verified for the pinned ...\n- Deprecated: hash verified for the pinned ...\n- Removed: hash verified for the pinned whe...\n\n## 5.5.4 - internal build\n\n- Fixed: resolving dependencies against the...\n- Deprecated: no conflicting requirements f...\n- Deprecated: hash verified for the pinned ...\n- Added: hash verified for the pinned wheel\n- Removed: deprecation: the proxies argumen...\n- Fixed: resolving dependencies against the...\n- Deprecated: resolving dependencies agains...\n- Added: hash verified for the pinned wheel\n\n## 6.6.0 - internal build\n\n- Fixed: deprecation: the proxies argument ...\n- Fixed: deprecation: the proxies argument ...\n- Removed: no conflicting requirements found\n- Removed: hash verified for the pinned whe...\n- Changed: deprecation: the proxies argumen...\n- Removed: hash verified for the pinned whe...\n- Fixed: smoke script streamed 4 MiB withou...\n- Added: resolving dependencies against the...\n\n## 7.7.1 - internal build\n\n- Added: deprecation: the proxies argument ...\n- Changed: hash verified for the pinned whe...\n- Added: no conflicting requirements found\n- Deprecated: smoke script streamed 4 MiB w...\n- Changed: no conflicting requirements found\n- Removed: hash verified for the pinned whe...\n- Deprecated: deprecation: the proxies argu...\n- Deprecated: resolving dependencies agains...\n\n## 8.8.2 - internal build\n\n- Changed: smoke script streamed 4 MiB with...\n- Removed: hash verified for the pinned whe...\n- Fixed: no conflicting requirements found\n- Deprecated: smoke script streamed 4 MiB w...\n- Changed: no conflicting requirements found\n- Added: no conflicting requirements found\n- Deprecated: hash verified for the pinned ...\n- Added: hash verified for the pinned wheel\n\n## 0.9.3 - internal build\n\n- Deprecated: hash verified for the pinned ...\n- Removed: no conflicting requirements found\n- Fixed: no conflicting requirements found\n- Changed: no conflicting requirements found\n- Deprecated: no conflicting requirements f...\n- Removed: hash verified for the pinned whe...\n- Removed: deprecation: the proxies argumen...\n- Added: deprecation: the proxies argument ...\n\n## 1.10.4 - internal build\n\n- Added: hash verified for the pinned wheel\n- Changed: smoke script streamed 4 MiB with...\n- Changed: resolving dependencies against t...\n- Changed: smoke script streamed 4 MiB with...\n- Deprecated: hash verified for the pinned ...\n- Removed: hash verified for the pinned whe...\n- Changed: resolving dependencies against t...\n- Added: hash verified for the pinned wheel\n\n## 2.0.0 - internal build\n\n- Deprecated: resolving dependencies agains...\n- Deprecated: smoke script streamed 4 MiB w...\n- Changed: no conflicting requirements found\n- Deprecated: hash verified for the pinned ...\n- Deprecated: deprecation: the proxies argu...\n- Fixed: smoke script streamed 4 MiB withou...\n- Added: smoke script streamed 4 MiB withou...\n- Changed: resolving dependencies against t...\n\n## 3.1.1 - internal build\n\n- Deprecated: deprecation: the proxies argu...\n- Added: hash verified for the pinned wheel\n- Deprecated: resolving dependencies agains...\n- Removed: smoke script streamed 4 MiB with...\n- Deprecated: smoke script streamed 4 MiB w...\n- Removed: no conflicting requirements found\n- Changed: hash verified for the pinned whe...\n- Fixed: no conflicting requirements found\n\n## 4.2.2 - internal build\n\n- Deprecated: no conflicting requirements f...\n- Removed: smoke script streamed 4 MiB with...\n- Removed: smoke script streamed 4 MiB with...\n- Changed: no conflicting requirements found\n- Changed: deprecation: the proxies argumen...\n- Changed: deprecation: the proxies argumen...\n- Removed: no conflicting requirements found\n- Fixed: hash verified for the pinned wheel\n\n## 5.3.3 - internal build\n\n- Fixed: hash verified for the pinned wheel\n- Deprecated: hash verified for the pinned ...\n- Deprecated: deprecation: the proxies argu...\n- Fixed: smoke script streamed 4 MiB withou...\n- Deprecated: hash verified for the pinned ...\n- Changed: no conflicting requirements found\n- Changed: resolving dependencies against t...\n- Deprecated: deprecation: the proxies argu...\n\n## 6.4.4 - internal build\n\n- Fixed: hash verified for the pinned wheel\n- Removed: deprecation: the proxies argumen...\n- Changed: deprecation: the proxies argumen...\n- Added: resolving dependencies against the...\n- Removed: resolving dependencies against t...\n- Deprecated: resolving dependencies agains...\n- Removed: no conflicting requirements found\n- Changed: deprecation: the proxies argumen...\n\n## 7.5.0 - internal build\n\n- Changed: no conflicting requirements found\n- Removed: smoke script streamed 4 MiB with...\n- Deprecated: no conflicting requirements f...\n- Removed: deprecation: the proxies argumen...\n- Fixed: hash verified for the pinned wheel\n- Added: resolving dependencies against the...\n- Deprecated: hash verified for the pinned ...\n- Added: hash verified for the pinned wheel\n\n## 8.6.1 - internal build\n\n- Added: resolving dependencies against the...\n- Deprecated: hash verified for the pinned ...\n- Added: resolving dependencies against the...\n- Removed: smoke script streamed 4 MiB with...\n- Fixed: smoke script streamed 4 MiB withou...\n- Fixed: hash verified for the pinned wheel\n- Removed: resolving dependencies against t...\n- Deprecated: hash verified for the pinned ...\n\n## 0.7.2 - internal build\n\n- Fixed: resolving dependencies against the...\n- Changed: no conflicting requirements found\n- Changed: no conflicting requirements found\n- Fixed: hash verified for the pinned wheel\n- Fixed: no conflicting requirements found\n- Removed: no conflicting requirements found\n- Deprecated: hash verified for the pinned ...\n- Added: no conflicting requirements found\n\n## 1.8.3 - internal build\n\n- Removed: no conflicting requirements found\n- Fixed: no conflicting requirements found\n- Removed: no conflicting requirements found\n- Deprecated: no conflicting requirements f...\n- Fixed: resolving dependencies against the...\n- Changed: no conflicting requirements found\n- Removed: resolving dependencies against t...\n- Removed: resolving dependencies against t...\n\n## 2.9.4 - internal build\n\n- Added: deprecation: the proxies argument ...\n- Fixed: deprecation: the proxies argument ...\n- Removed: smoke script streamed 4 MiB with...\n- Changed: resolving dependencies against t...\n- Removed: hash verified for the pinned whe...\n- Deprecated: deprecation: the proxies argu...\n- Changed: smoke script streamed 4 MiB with...\n- Changed: resolving dependencies against t...\n\n## 3.10.0 - internal build\n\n- Deprecated: smoke script streamed 4 MiB w...\n- Deprecated: resolving dependencies agains...\n- Fixed: smoke script streamed 4 MiB withou...\n- Deprecated: resolving dependencies agains...\n- Fixed: resolving dependencies against the...\n- Removed: hash verified for the pinned whe...\n- Fixed: smoke script streamed 4 MiB withou...\n- Fixed: no conflicting requirements found\n\n## 4.0.1 - internal build\n\n- Changed: smoke script streamed 4 MiB with...\n- Changed: deprecation: the proxies argumen...\n- Deprecated: hash verified for the pinned ...\n- Removed: hash verified for the pinned whe...\n- Added: hash verified for the pinned wheel\n- Fixed: deprecation: the proxies argument ...\n- Removed: resolving dependencies against t...\n- Added: hash verified for the pinned wheel\n\n## 5.1.2 - internal build\n\n- Added: hash verified for the pinned wheel\n- Deprecated: no conflicting requirements f...\n- Deprecated: no conflicting requirements f...\n- Added: deprecation: the proxies argument ...\n- Fixed: no conflicting requirements found\n- Added: resolving dependencies against the...\n- Added: deprecation: the proxies argument ...\n- Fixed: no conflicting requirements found\n\n## 6.2.3 - internal build\n\n- Deprecated: no conflicting requirements f...\n- Added: smoke script streamed 4 MiB withou...\n- Fixed: resolving dependencies against the...\n- Deprecated: hash verified for the pinned ...\n- Removed: smoke script streamed 4 MiB with...\n- Deprecated: no conflicting requirements f...\n- Removed: hash verified for the pinned whe...\n- Deprecated: deprecation: the proxies argu...\n\n## 7.3.4 - internal build\n\n- Deprecated: deprecation: the proxies argu...\n- Fixed: hash verified for the pinned wheel\n- Added: hash verified for the pinned wheel\n- Added: smoke script streamed 4 MiB withou...\n- Deprecated: hash verified for the pinned ...\n- Removed: hash verified for the pinned whe...\n- Changed: resolving dependencies against t...\n- Changed: hash verified for the pinned whe...\n\n## 8.4.0 - internal build\n\n- Removed: hash verified for the pinned whe...\n- Fixed: hash verified for the pinned wheel\n- Added: smoke script streamed 4 MiB withou...\n- Removed: smoke script streamed 4 MiB with...\n- Added: resolving dependencies against the...\n- Fixed: resolving dependencies against the...\n- Deprecated: no conflicting requirements f...\n- Added: hash verified for the pinned wheel\n\n## 0.5.1 - internal build\n\n- Deprecated: no conflicting requirements f...\n- Deprecated: hash verified for the pinned ...\n- Added: hash verified for the pinned wheel\n- Fixed: no conflicting requirements found\n- Deprecated: hash verified for the pinned ...\n- Fixed: smoke script streamed 4 MiB withou...\n- Added: resolving dependencies against the...\n- Fixed: resolving dependencies against the...\n\n## 1.6.2 - internal build\n\n- Fixed: hash verified for the pinned wheel\n- Removed: resolving dependencies against t...\n- Fixed: smoke script streamed 4 MiB withou...\n- Fixed: hash verified for the pinned wheel\n- Changed: no conflicting requirements found\n- Changed: deprecation: the proxies argumen...\n- Added: resolving dependencies against the...\n- Changed: smoke script streamed 4 MiB with...\n\n## 2.7.3 - internal build\n\n- Fixed: no conflicting requirements found\n- Added: no conflicting requirements found\n- Fixed: resolving dependencies against the...\n- Deprecated: hash verified for the pinned ...\n- Changed: hash verified for the pinned whe...\n- Fixed: no conflicting requirements found\n- Fixed: deprecation: the proxies argument ...\n- Fixed: resolving dependencies against the...\n\n## 3.8.4 - internal build\n\n- Fixed: no conflicting requirements found\n- Added: no conflicting requirements found\n- Deprecated: smoke script streamed 4 MiB w...\n- Fixed: no conflicting requirements found\n- Removed: resolving dependencies against t...\n- Added: hash verified for the pinned wheel\n- Deprecated: no conflicting requirements f...\n- Deprecated: no conflicting requirements f...\n\n## 4.9.0 - internal build\n\n- Changed: hash verified for the pinned whe...\n- Fixed: hash verified for the pinned wheel\n- Removed: resolving dependencies against t...\n- Added: deprecation: the proxies argument ...\n- Changed: hash verified for the pinned whe...\n- Removed: no conflicting requirements found\n- Added: deprecation: the proxies argument ...\n- Deprecated: no conflicting requirements f...\n\n## 5.10.1 - internal build\n\n- Added: resolving dependencies against the...\n- Deprecated: hash verified for the pinned ...\n- Added: smoke script streamed 4 MiB withou...\n- Deprecated: no conflicting requirements f...\n- Fixed: smoke script streamed 4 MiB withou...\n- Added: hash verified for the pinned wheel\n- Removed: resolving dependencies against t...\n- Removed: hash verified for the pinned whe...\n\n## 6.0.2 - internal build\n\n- Added: deprecation: the proxies argument ...\n- Removed: smoke script streamed 4 MiB with...\n- Fixed: deprecation: the proxies argument ...\n- Deprecated: hash verified for the pinned ...\n- Changed: deprecation: the proxies argumen...\n- Added: smoke script streamed 4 MiB withou...\n- Added: smoke script streamed 4 MiB withou...\n- Fixed: smoke script streamed 4 MiB withou...\n\n## 7.1.3 - internal build\n\n- Deprecated: smoke script streamed 4 MiB w...\n- Changed: no conflicting requirements found\n- Deprecated: smoke script streamed 4 MiB w...\n- Added: hash verified for the pinned wheel\n- Removed: no conflicting requirements found\n- Removed: smoke script streamed 4 MiB with...\n- Added: hash verified for the pinned wheel\n- Fixed: hash verified for the pinned wheel\n\n## 8.2.4 - internal build\n\n- Added: smoke script streamed 4 MiB withou...\n- Fixed: smoke script streamed 4 MiB withou...\n- Deprecated: smoke script streamed 4 MiB w...\n- Added: deprecation: the proxies argument ...\n- Fixed: resolving dependencies against the...\n- Fixed: deprecation: the proxies argument ...\n- Deprecated: deprecation: the proxies argu...\n- Changed: deprecation: the proxies argumen...\n\n## 0.3.0 - internal build\n\n- Added: resolving dependencies against the...\n- Changed: no conflicting requirements found\n- Added: resolving dependencies against the...\n- Added: no conflicting requirements found\n- Fixed: resolving dependencies against the...\n- Deprecated: deprecation: the proxies argu...\n- Deprecated: resolving dependencies agains...\n- Added: hash verified for the pinned wheel\n\n## 1.4.1 - internal build\n\n- Removed: smoke script streamed 4 MiB with...\n- Deprecated: hash verified for the pinned ...\n- Changed: deprecation: the proxies argumen...\n- Added: no conflicting requirements found\n- Added: smoke script streamed 4 MiB withou...\n- Added: hash verified for the pinned wheel\n- Deprecated: resolving dependencies agains...\n- Changed: deprecation: the proxies argumen...\n\n## 2.5.2 - internal build\n\n- Removed: smoke script streamed 4 MiB with...\n- Added: hash verified for the pinned wheel\n- Added: smoke script streamed 4 MiB withou...\n- Fixed: hash verified for the pinned wheel\n- Fixed: deprecation: the proxies argument ...\n- Removed: no conflicting requirements found\n- Deprecated: no conflicting requirements f...\n- Deprecated: deprecation: the proxies argu...\n\n## 3.6.3 - internal build\n\n- Deprecated: deprecation: the proxies argu...\n- Deprecated: resolving dependencies agains...\n- Deprecated: deprecation: the proxies argu...\n- Deprecated: deprecation: the proxies argu...\n- Added: no conflicting requirements found\n- Removed: resolving dependencies against t...\n- Deprecated: hash verified for the pinned ...\n- Removed: no conflicting requirements found\n\n## 4.7.4 - internal build\n\n- Added: smoke script streamed 4 MiB withou...\n- Deprecated: resolving dependencies agains...\n- Fixed: deprecation: the proxies argument ...\n- Added: resolving dependencies against the...\n- Fixed: resolving dependencies against the...\n- Fixed: resolving dependencies against the...\n- Fixed: deprecation: the proxies argument ...\n- Fixed: smoke script streamed 4 MiB withou...\n\n## 5.8.0 - internal build\n\n- Fixed: deprecation: the proxies argument ...\n- Fixed: hash verified for the pinned wheel\n- Changed: resolving dependencies against t...\n- Added: smoke script streamed 4 MiB withou...\n- Removed: hash verified for the pinned whe...\n- Added: smoke script streamed 4 MiB withou...\n- Deprecated: resolving dependencies agains...\n- Fixed: deprecation: the proxies argument ...\n\n## 6.9.1 - internal build\n\n- Removed: resolving dependencies against t...\n- Fixed: smoke script streamed 4 MiB withou...\n- Changed: no conflicting requirements found\n- Changed: deprecation: the proxies argumen...\n- Added: resolving dependencies against the...\n- Removed: deprecation: the proxies argumen...\n- Removed: resolving dependencies against t...\n- Changed: resolving dependencies against t...\n\n## 7.10.2 - internal build\n\n- Added: hash verified for the pinned wheel\n- Fixed: deprecation: the proxies argument ...\n- Added: smoke script streamed 4 MiB withou...\n- Removed: smoke script streamed 4 MiB with...\n- Changed: hash verified for the pinned whe...\n- Added: no conflicting requirements found\n- Added: hash verified for the pinned wheel\n- Fixed: deprecation: the proxies argument ...\n\n## 8.0.3 - internal build\n\n- Deprecated: resolving dependencies agains...\n- Removed: no conflicting requirements found\n- Deprecated: smoke script streamed 4 MiB w...\n- Deprecated: deprecation: the proxies argu...\n- Changed: hash verified for the pinned whe...\n- Deprecated: no conflicting requirements f...\n- Changed: resolving dependencies against t...\n- Changed: hash verified for the pinned whe...\n\n## 0.1.4 - internal build\n\n- Removed: deprecation: the proxies argumen...\n- Deprecated: deprecation: the proxies argu...\n- Added: hash verified for the pinned wheel\n- Removed: resolving dependencies against t...\n- Added: resolving dependencies against the...\n- Removed: smoke script streamed 4 MiB with...\n- Added: resolving dependencies against the...\n- Deprecated: deprecation: the proxies argu...\n\n## 1.2.0 - internal build\n\n- Deprecated: hash verified for the pinned ...\n- Changed: deprecation: the proxies argumen...\n- Changed: smoke script streamed 4 MiB with...\n- Added: hash verified for the pinned wheel\n- Removed: hash verified for the pinned whe...\n- Added: smoke script streamed 4 MiB withou...\n- Fixed: deprecation: the proxies argument ...\n- Added: smoke script streamed 4 MiB withou...\n\n## 2.3.1 - internal build\n\n- Changed: no conflicting requirements found\n- Removed: hash verified for the pinned whe...\n- Changed: no conflicting requirements found\n- Added: deprecation: the proxies argument ...\n- Fixed: hash verified for the pinned wheel\n- Deprecated: hash verified for the pinned ...\n- Added: smoke script streamed 4 MiB withou...\n- Added: deprecation: the proxies argument ...\n\n## 3.4.2 - internal build\n\n- Changed: smoke script streamed 4 MiB with...\n- Changed: resolving dependencies against t...\n- Deprecated: smoke script streamed 4 MiB w...\n- Removed: deprecation: the proxies argumen...\n- Deprecated: smoke script streamed 4 MiB w...\n- Deprecated: hash verified for the pinned ...\n- Deprecated: smoke script streamed 4 MiB w...\n- Changed: hash verified for the pinned whe...\n\n## 4.5.3 - internal build\n\n- Changed: deprecation: the proxies argumen...\n- Deprecated: no conflicting requirements f...\n- Added: deprecation: the proxies argument ...\n- Added: smoke script streamed 4 MiB withou...\n- Changed: smoke script streamed 4 MiB with...\n- Removed: resolving dependencies against t...\n- Changed: smoke script streamed 4 MiB with...\n- Fixed: hash verified for the pinned wheel\n\n## 5.6.4 - internal build\n\n- Changed: hash verified for the pinned whe...\n- Fixed: deprecation: the proxies argument ...\n- Removed: no conflicting requirements found\n- Fixed: resolving dependencies against the...\n- Deprecated: no conflicting requirements f...\n- Added: resolving dependencies against the...\n- Removed: hash verified for the pinned whe...\n- Removed: deprecation: the proxies argumen...\n\n## 6.7.0 - internal build\n\n- Removed: no conflicting requirements found\n- Added: no conflicting requirements found\n- Deprecated: deprecation: the proxies argu...\n- Removed: no conflicting requirements found\n- Fixed: resolving dependencies against the...\n- Deprecated: smoke script streamed 4 MiB w...\n- Removed: deprecation: the proxies argumen...\n- Deprecated: resolving dependencies agains...\n\n## 7.8.1 - internal build\n\n- Removed: deprecation: the proxies argumen...\n- Added: no conflicting requirements found\n- Deprecated: deprecation: the proxies argu...\n- Removed: hash verified for the pinned whe...\n- Fixed: no conflicting requirements found\n- Deprecated: no conflicting requirements f...\n- Fixed: no conflicting requirements found\n- Deprecated: resolving dependencies agains...\n\n## 8.9.2 - internal build\n\n- Added: resolving dependencies against the...\n- Removed: smoke script streamed 4 MiB with...\n- Fixed: deprecation: the proxies argument ...\n- Added: deprecation: the proxies argument ...\n- Removed: deprecation: the proxies argumen...\n- Fixed: smoke script streamed 4 MiB withou...\n- Added: deprecation: the proxies argument ...\n- Fixed: smoke script streamed 4 MiB withou...\n\n## 0.10.3 - internal build\n\n- Removed: deprecation: the proxies argumen...\n- Changed: smoke script streamed 4 MiB with...\n- Changed: no conflicting requirements found\n- Fixed: resolving dependencies against the...\n- Removed: smoke script streamed 4 MiB with...\n- Changed: no conflicting requirements found\n- Added: no conflicting requirements found\n- Changed: no conflicting requirements found\n\n## 1.0.4 - internal build\n\n- Changed: smoke script streamed 4 MiB with...\n- Removed: no conflicting requirements found\n- Changed: no conflicting requirements found\n- Removed: resolving dependencies against t...\n- Added: resolving dependencies against the...\n- Added: deprecation: the proxies argument ...\n- Changed: smoke script streamed 4 MiB with...\n- Added: deprecation: the proxies argument ...\n\n## 2.1.0 - internal build\n\n- Fixed: no conflicting requirements found\n- Added: smoke script streamed 4 MiB withou...\n- Deprecated: resolving dependencies agains...\n- Fixed: no conflicting requirements found\n- Changed: resolving dependencies against t...\n- Added: no conflicting requirements found\n- Removed: no conflicting requirements found\n- Added: no conflicting requirements found\n\n## 3.2.1 - internal build\n\n- Removed: hash verified for the pinned whe...\n- Added: deprecation: the proxies argument ...\n- Changed: smoke script streamed 4 MiB with...\n- Added: deprecation: the proxies argument ...\n- Added: hash verified for the pinned wheel\n- Changed: no conflicting requirements found\n- Deprecated: smoke script streamed 4 MiB w...\n- Changed: deprecation: the proxies argumen...\n\n## 4.3.2 - internal build\n\n- Deprecated: hash verified for the pinned ...\n- Removed: no conflicting requirements found\n- Added: deprecation: the proxies argument ...\n- Changed: resolving dependencies against t...\n- Fixed: resolving dependencies against the...\n- Deprecated: deprecation: the proxies argu...\n- Added: resolving dependencies against the...\n- Added: deprecation: the proxies argument ...\n\n## 5.4.3 - internal build\n\n- Changed: smoke script streamed 4 MiB with...\n- Changed: smoke script streamed 4 MiB with...\n- Added: resolving dependencies against the...\n- Deprecated: deprecation: the proxies argu...\n- Deprecated: resolving dependencies agains...\n- Fixed: deprecation: the proxies argument ...\n- Added: smoke script streamed 4 MiB withou...\n- Changed: no conflicting requirements found\n\n## 6.5.4 - internal build\n\n- Removed: resolving dependencies against t...\n- Added: hash verified for the pinned wheel\n- Fixed: deprecation: the proxies argument ...\n- Changed: no conflicting requirements found\n- Added: resolving dependencies against the...\n- Changed: resolving dependencies against t...\n- Changed: no conflicting requirements found\n- Added: hash verified for the pinned wheel\n\n## 7.6.0 - internal build\n\n- Added: resolving dependencies against the...\n- Removed: hash verified for the pinned whe...\n- Fixed: smoke script streamed 4 MiB withou...\n- Deprecated: resolving dependencies agains...\n- Added: smoke script streamed 4 MiB withou...\n- Fixed: smoke script streamed 4 MiB withou...\n- Changed: no conflicting requirements found\n- Deprecated: resolving dependencies agains...\n\n## 8.7.1 - internal build\n\n- Added: deprecation: the proxies argument ...\n- Changed: resolving dependencies against t...\n- Deprecated: hash verified for the pinned ...\n- Deprecated: hash verified for the pinned ...\n- Fixed: resolving dependencies against the...\n- Deprecated: hash verified for the pinned ...\n- Changed: resolving dependencies against t...\n- Removed: resolving dependencies against t...\n\n## 0.8.2 - internal build\n\n- Deprecated: hash verified for the pinned ...\n- Deprecated: deprecation: the proxies argu...\n- Fixed: hash verified for the pinned wheel\n- Removed: smoke script streamed 4 MiB with...\n- Deprecated: no conflicting requirements f...\n- Deprecated: hash verified for the pinned ...\n- Removed: smoke script streamed 4 MiB with...\n- Deprecated: hash verified for the pinned ...\n\n## 1.9.3 - internal build\n\n- Removed: no conflicting requirements found\n- Removed: hash verified for the pinned whe...\n- Deprecated: no conflicting requirements f...\n- Fixed: resolving dependencies against the...\n- Deprecated: resolving dependencies agains...\n- Changed: no conflicting requirements found\n- Deprecated: resolving dependencies agains...\n- Deprecated: smoke script streamed 4 MiB w...\n\n## 2.10.4 - internal build\n\n- Deprecated: no conflicting requirements f...\n- Fixed: resolving dependencies against the...\n- Deprecated: hash verified for the pinned ...",
+      "tool_call_id": "case-05-dependency-upgrade-tc003",
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m021",
+      "metadata": {},
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "The removal is documented three releases before it landed, which is why nobody saw it coming.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m022",
+      "metadata": {
+        "filler": "duplicate",
+        "note": "near-duplicate of an earlier turn"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "user",
+      "text": "Does the lock file still resolve on the oldest supported interpreter?",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m023",
+      "metadata": {
+        "filler": "duplicate",
+        "note": "near-duplicate of an earlier turn"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "The lock file pins transitive dependencies that the project never imports. I re-read requirements.lock around `AsyncTransport` before settling on that.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m024",
+      "metadata": {
+        "filler": "boilerplate"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Running `grep -rn proxies src` now and reporting back; no other file changes in flight.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m025",
+      "metadata": {
+        "filler": "assistant_note"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "The smoke script is the only thing that exercises the streaming path. I re-read src/config/endpoints.py around `AsyncTransport` before settling on that.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m026",
+      "metadata": {
+        "filler": "boilerplate"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Running `pip check` now and reporting back; no other file changes in flight.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m027",
+      "metadata": {
+        "attempt": 1,
+        "distractor": "repeated_tool_call"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Resolving the lock file once more to be sure the index is not flaking.",
+      "tool_call_id": null,
+      "tool_calls": [
+        {
+          "arguments": "{\"command\": \"pip install -r requirements.lock --dry-run\"}",
+          "id": "case-05-dependency-upgrade-tc004",
+          "name": "execute"
+        }
+      ]
+    },
+    {
+      "id": "case-05-dependency-upgrade-m028",
+      "metadata": {
+        "attempt": 1,
+        "distractor": "repeated_tool_call"
+      },
+      "name": "execute",
+      "pinned": false,
+      "role": "tool",
+      "text": "would install httpx-0.28.1 httpcore-1.0.9\nno conflicting requirements found",
+      "tool_call_id": "case-05-dependency-upgrade-tc004",
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m029",
+      "metadata": {
+        "attempt": 2,
+        "distractor": "repeated_tool_call"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Resolving the lock file once more to be sure the index is not flaking.",
+      "tool_call_id": null,
+      "tool_calls": [
+        {
+          "arguments": "{\"command\": \"pip install -r requirements.lock --dry-run\"}",
+          "id": "case-05-dependency-upgrade-tc005",
+          "name": "execute"
+        }
+      ]
+    },
+    {
+      "id": "case-05-dependency-upgrade-m030",
+      "metadata": {
+        "attempt": 2,
+        "distractor": "repeated_tool_call"
+      },
+      "name": "execute",
+      "pinned": false,
+      "role": "tool",
+      "text": "would install httpx-0.28.1 httpcore-1.0.9\nno conflicting requirements found",
+      "tool_call_id": "case-05-dependency-upgrade-tc005",
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m031",
+      "metadata": {
+        "attempt": 3,
+        "distractor": "repeated_tool_call"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Resolving the lock file once more to be sure the index is not flaking.",
+      "tool_call_id": null,
+      "tool_calls": [
+        {
+          "arguments": "{\"command\": \"pip install -r requirements.lock --dry-run\"}",
+          "id": "case-05-dependency-upgrade-tc006",
+          "name": "execute"
+        }
+      ]
+    },
+    {
+      "id": "case-05-dependency-upgrade-m032",
+      "metadata": {
+        "attempt": 3,
+        "distractor": "repeated_tool_call"
+      },
+      "name": "execute",
+      "pinned": false,
+      "role": "tool",
+      "text": "would install httpx-0.28.1 httpcore-1.0.9\nno conflicting requirements found",
+      "tool_call_id": "case-05-dependency-upgrade-tc006",
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m033",
+      "metadata": {
+        "filler": "user_note"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "user",
+      "text": "Is the streaming path covered by anything other than the smoke script?",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m034",
+      "metadata": {},
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Reading the lock file excerpt to confirm the pin and its hash.",
+      "tool_call_id": null,
+      "tool_calls": [
+        {
+          "arguments": "{\"path\": \"requirements.lock\"}",
+          "id": "case-05-dependency-upgrade-tc007",
+          "name": "read_file"
+        }
+      ]
+    },
+    {
+      "id": "case-05-dependency-upgrade-m035",
+      "metadata": {
+        "states_fact": "lock-pin-line",
+        "tool_output_chars": 38318,
+        "tool_output_lines": 2101
+      },
+      "name": "read_file",
+      "pinned": false,
+      "role": "tool",
+      "text": "[[package]]\nname = \"httpcore\"\nversion = \"1.1.1\"\ndescription = \"timeout\"\nfiles = \"9f6c24662c94cadadd45fa9f...\n\n[[package]]\nname = \"h11\"\nversion = \"2.2.2\"\ndescription = \"timeout\"\nfiles = \"e47c6f1578c0484e42367b50...\n\n[[package]]\nname = \"anyio\"\nversion = \"3.3.3\"\ndescription = \"wheel\"\nfiles = \"3fc58491ac5347199a628158...\n\n[[package]]\nname = \"sniffio\"\nversion = \"4.4.4\"\ndescription = \"timeout\"\nfiles = \"fc6495c69d0797c9bc19769e...\n\n[[package]]\nname = \"certifi\"\nversion = \"5.5.0\"\ndescription = \"proxy\"\nfiles = \"e6a3cf5292d2f2f0b53c599c...\n\n[[package]]\nname = \"idna\"\nversion = \"6.6.1\"\ndescription = \"transport\"\nfiles = \"26ec3443deed8549f78b6ce3...\n\n[[package]]\nname = \"langchain\"\nversion = \"7.0.2\"\ndescription = \"http client\"\nfiles = \"155bdb3588a72515655c8ce6...\n\n[[package]]\nname = \"langchain-core\"\nversion = \"8.1.3\"\ndescription = \"http client\"\nfiles = \"6d6c08accf3be61e6a264078...\n\n[[package]]\nname = \"tenacity\"\nversion = \"9.2.4\"\ndescription = \"proxy\"\nfiles = \"4fca6ca4e889e21ad0f91938...\n\n[[package]]\nname = \"rich\"\nversion = \"10.3.0\"\ndescription = \"transport\"\nfiles = \"a561048b5fdbfa743ae7a286...\n\n[[package]]\nname = \"textual\"\nversion = \"11.4.1\"\ndescription = \"http client\"\nfiles = \"241e4d55fa2044363f0c86d0...\n\n[[package]]\nname = \"httpx\"\nversion = \"0.5.2\"\ndescription = \"wheel\"\nfiles = \"1d5dcbb97831bb24c47041b2...\n\n[[package]]\nname = \"httpcore\"\nversion = \"1.6.3\"\ndescription = \"transport\"\nfiles = \"9ee71cdde675c69e2503099e...\n\n[[package]]\nname = \"h11\"\nversion = \"2.0.4\"\ndescription = \"proxy\"\nfiles = \"cc3dbddd9293bd0c453be3d4...\n\n[[package]]\nname = \"anyio\"\nversion = \"3.1.0\"\ndescription = \"http client\"\nfiles = \"5d11aa397ce13432784b44ff...\n\n[[package]]\nname = \"sniffio\"\nversion = \"4.2.1\"\ndescription = \"timeout\"\nfiles = \"2056a3886b72363639376c39...\n\n[[package]]\nname = \"certifi\"\nversion = \"5.3.2\"\ndescription = \"proxy\"\nfiles = \"09836d2a4d313b47fa023858...\n\n[[package]]\nname = \"idna\"\nversion = \"6.4.3\"\ndescription = \"wheel\"\nfiles = \"d6d80c29a2830fc320e73b3e...\n\n[[package]]\nname = \"langchain\"\nversion = \"7.5.4\"\ndescription = \"timeout\"\nfiles = \"8862b8b0770fa7908ba0d875...\n\n[[package]]\nname = \"langchain-core\"\nversion = \"8.6.0\"\ndescription = \"http client\"\nfiles = \"1da33d9fdfd8e37e23678a6e...\n\n[[package]]\nname = \"tenacity\"\nversion = \"9.0.1\"\ndescription = \"wheel\"\nfiles = \"63d4f4053cdf507b0b606453...\n\n[[package]]\nname = \"rich\"\nversion = \"10.1.2\"\ndescription = \"transport\"\nfiles = \"61c518336c77d9154f8245fb...\n\n[[package]]\nname = \"textual\"\nversion = \"11.2.3\"\ndescription = \"proxy\"\nfiles = \"6fb9f4c928b398a0f52d92d2...\n\n[[package]]\nname = \"httpx\"\nversion = \"0.3.4\"\ndescription = \"proxy\"\nfiles = \"88771b439766e42e77ba49e7...\n\n[[package]]\nname = \"httpcore\"\nversion = \"1.4.0\"\ndescription = \"proxy\"\nfiles = \"3cdc03f28f5c19cf66ddff9d...\n\n[[package]]\nname = \"h11\"\nversion = \"2.5.1\"\ndescription = \"http client\"\nfiles = \"b61f05f77bbb45648c2c76e3...\n\n[[package]]\nname = \"anyio\"\nversion = \"3.6.2\"\ndescription = \"wheel\"\nfiles = \"cab41aa9587c4b59b757b5d8...\n\n[[package]]\nname = \"sniffio\"\nversion = \"4.0.3\"\ndescription = \"wheel\"\nfiles = \"a709f69836821e5b836d45f2...\n\n[[package]]\nname = \"certifi\"\nversion = \"5.1.4\"\ndescription = \"http client\"\nfiles = \"8848a07620c9e40ed34c6526...\n\n[[package]]\nname = \"idna\"\nversion = \"6.2.0\"\ndescription = \"http client\"\nfiles = \"a7ed0cd61618346ed833ff61...\n\n[[package]]\nname = \"langchain\"\nversion = \"7.3.1\"\ndescription = \"http client\"\nfiles = \"5b9313cfa06a774bf0308363...\n\n[[package]]\nname = \"langchain-core\"\nversion = \"8.4.2\"\ndescription = \"transport\"\nfiles = \"1d02a5197e04b0ba3650ddc4...\n\n[[package]]\nname = \"tenacity\"\nversion = \"9.5.3\"\ndescription = \"wheel\"\nfiles = \"9eb4f345eda69d6c1d061e2e...\n\n[[package]]\nname = \"rich\"\nversion = \"10.6.4\"\ndescription = \"timeout\"\nfiles = \"b8be571d32e20907d9d75daf...\n\n[[package]]\nname = \"textual\"\nversion = \"11.0.0\"\ndescription = \"transport\"\nfiles = \"56958de170b10550d4f69c24...\n\n[[package]]\nname = \"httpx\"\nversion = \"0.1.1\"\ndescription = \"timeout\"\nfiles = \"ccf0b6e4016d271b4fe559ee...\n\n[[package]]\nname = \"httpcore\"\nversion = \"1.2.2\"\ndescription = \"http client\"\nfiles = \"9d20126c6aad1b75172935d9...\n\n[[package]]\nname = \"h11\"\nversion = \"2.3.3\"\ndescription = \"wheel\"\nfiles = \"9e8a6123761f4e2ba5584667...\n\n[[package]]\nname = \"anyio\"\nversion = \"3.4.4\"\ndescription = \"timeout\"\nfiles = \"b2e4d1d9676eef3cbcfa1d07...\n\n[[package]]\nname = \"sniffio\"\nversion = \"4.5.0\"\ndescription = \"proxy\"\nfiles = \"71ebf9760cd67bb0cd00a675...\n\n[[package]]\nname = \"certifi\"\nversion = \"5.6.1\"\ndescription = \"transport\"\nfiles = \"b3b3d1f777b4ef98610ea600...\n\n[[package]]\nname = \"idna\"\nversion = \"6.0.2\"\ndescription = \"timeout\"\nfiles = \"2ea6c2c230d1aef92c769559...\n\n[[package]]\nname = \"langchain\"\nversion = \"7.1.3\"\ndescription = \"proxy\"\nfiles = \"596ddb798425b0536f7bb180...\n\n[[package]]\nname = \"langchain-core\"\nversion = \"8.2.4\"\ndescription = \"http client\"\nfiles = \"497ff6bf9f3595a2be7824f4...\n\n[[package]]\nname = \"tenacity\"\nversion = \"9.3.0\"\ndescription = \"http client\"\nfiles = \"6fec1ed5a210ed71d1520f70...\n\n[[package]]\nname = \"rich\"\nversion = \"10.4.1\"\ndescription = \"http client\"\nfiles = \"a7a816f1fa107b52023f5d53...\n\n[[package]]\nname = \"textual\"\nversion = \"11.5.2\"\ndescription = \"proxy\"\nfiles = \"a40387a21822d760a00a5ec0...\n\n[[package]]\nname = \"httpx\"\nversion = \"0.6.3\"\ndescription = \"proxy\"\nfiles = \"4d1a28dc6198629fdf9f6730...\n\n[[package]]\nname = \"httpcore\"\nversion = \"1.0.4\"\ndescription = \"proxy\"\nfiles = \"28e929eca63056362a3b1a58...\n\n[[package]]\nname = \"h11\"\nversion = \"2.1.0\"\ndescription = \"timeout\"\nfiles = \"5879e9b32e943fd22830e33e...\n\n[[package]]\nname = \"anyio\"\nversion = \"3.2.1\"\ndescription = \"transport\"\nfiles = \"4259bbd1ffc02666682ec15e...\n\n[[package]]\nname = \"sniffio\"\nversion = \"4.3.2\"\ndescription = \"wheel\"\nfiles = \"cc5fe6784c828994ad6d3f03...\n\n[[package]]\nname = \"certifi\"\nversion = \"5.4.3\"\ndescription = \"proxy\"\nfiles = \"b6087eea25b0728063078334...\n\n[[package]]\nname = \"idna\"\nversion = \"6.5.4\"\ndescription = \"wheel\"\nfiles = \"2b26832e9e175bb24fe3a593...\n\n[[package]]\nname = \"langchain\"\nversion = \"7.6.0\"\ndescription = \"http client\"\nfiles = \"9ff70180d9e560b6add22746...\n\n[[package]]\nname = \"langchain-core\"\nversion = \"8.0.1\"\ndescription = \"http client\"\nfiles = \"aa78de15dfa4f5f4793f1fbe...\n\n[[package]]\nname = \"tenacity\"\nversion = \"9.1.2\"\ndescription = \"http client\"\nfiles = \"8c60a70a148e50db2ea9cc5b...\n\n[[package]]\nname = \"rich\"\nversion = \"10.2.3\"\ndescription = \"timeout\"\nfiles = \"a345785d84ac9338ae278a7c...\n\n[[package]]\nname = \"textual\"\nversion = \"11.3.4\"\ndescription = \"transport\"\nfiles = \"d80e114627d85e6c8b0c3b46...\n\n[[package]]\nname = \"httpx\"\nversion = \"0.4.0\"\ndescription = \"proxy\"\nfiles = \"5230f3e4225fa0bd47dd442e...\n\n[[package]]\nname = \"httpcore\"\nversion = \"1.5.1\"\ndescription = \"transport\"\nfiles = \"2caa9b68a4736dc36f5bdd7a...\n\n[[package]]\nname = \"h11\"\nversion = \"2.6.2\"\ndescription = \"timeout\"\nfiles = \"9a14a45f8bb1ba151d4dc6de...\n\n[[package]]\nname = \"anyio\"\nversion = \"3.0.3\"\ndescription = \"wheel\"\nfiles = \"5918aba57ed5e25d998d27ed...\n\n[[package]]\nname = \"sniffio\"\nversion = \"4.1.4\"\ndescription = \"wheel\"\nfiles = \"8d944ecf043e4c30345f9e6d...\n\n[[package]]\nname = \"certifi\"\nversion = \"5.2.0\"\ndescription = \"transport\"\nfiles = \"6448bda6de508d07bd22c780...\n\n[[package]]\nname = \"idna\"\nversion = \"6.3.1\"\ndescription = \"wheel\"\nfiles = \"243a53927bc50c3e8f0e5e03...\n\n[[package]]\nname = \"langchain\"\nversion = \"7.4.2\"\ndescription = \"timeout\"\nfiles = \"e626cec8d85ac1edb8c7836a...\n\n[[package]]\nname = \"langchain-core\"\nversion = \"8.5.3\"\ndescription = \"transport\"\nfiles = \"d743862d1e66a15915c44951...\n\n[[package]]\nname = \"tenacity\"\nversion = \"9.6.4\"\ndescription = \"wheel\"\nfiles = \"f1c0d2f6592dac005808f0c4...\n\n[[package]]\nname = \"rich\"\nversion = \"10.0.0\"\ndescription = \"wheel\"\nfiles = \"0b8a344b6777211b46876def...\n\n[[package]]\nname = \"textual\"\nversion = \"11.1.1\"\ndescription = \"timeout\"\nfiles = \"446ae0d9c21a701782824e01...\n\n[[package]]\nname = \"httpx\"\nversion = \"0.2.2\"\ndescription = \"wheel\"\nfiles = \"83e3c181d5f60dd253c32912...\n\n[[package]]\nname = \"httpcore\"\nversion = \"1.3.3\"\ndescription = \"proxy\"\nfiles = \"a8b5b6e440c6d85159bac9ac...\n\n[[package]]\nname = \"h11\"\nversion = \"2.4.4\"\ndescription = \"wheel\"\nfiles = \"895148275814ffad860d0b1e...\n\n[[package]]\nname = \"anyio\"\nversion = \"3.5.0\"\ndescription = \"http client\"\nfiles = \"4b53d5d9031d1cc516a349d4...\n\n[[package]]\nname = \"sniffio\"\nversion = \"4.6.1\"\ndescription = \"proxy\"\nfiles = \"25d7a53e60c8e542f3840e37...\n\n[[package]]\nname = \"certifi\"\nversion = \"5.0.2\"\ndescription = \"http client\"\nfiles = \"1f8e63132669045e5ef0e20c...\n\n[[package]]\nname = \"idna\"\nversion = \"6.1.3\"\ndescription = \"wheel\"\nfiles = \"0875ebe5da645e710eef6c17...\n\n[[package]]\nname = \"langchain\"\nversion = \"7.2.4\"\ndescription = \"proxy\"\nfiles = \"020d6f7b8101ebafaf77b3f1...\n\n[[package]]\nname = \"langchain-core\"\nversion = \"8.3.0\"\ndescription = \"proxy\"\nfiles = \"59d267cf281b7e9361200d20...\n\n[[package]]\nname = \"tenacity\"\nversion = \"9.4.1\"\ndescription = \"transport\"\nfiles = \"8cb1f58498a63e298a74911b...\n\n[[package]]\nname = \"rich\"\nversion = \"10.5.2\"\ndescription = \"timeout\"\nfiles = \"31c5c3764c498c21acf3c8b2...\n\n[[package]]\nname = \"textual\"\nversion = \"11.6.3\"\ndescription = \"wheel\"\nfiles = \"8627df550f5e437e6747aa60...\n\n[[package]]\nname = \"httpx\"\nversion = \"0.0.4\"\ndescription = \"transport\"\nfiles = \"da7f8568bd94fbc641c5f1ab...\n\n[[package]]\nname = \"httpcore\"\nversion = \"1.1.0\"\ndescription = \"wheel\"\nfiles = \"44079c9496cf76409a1a0f4c...\n\n[[package]]\nname = \"h11\"\nversion = \"2.2.1\"\ndescription = \"wheel\"\nfiles = \"eab045caacfc251a36e48ab7...\n\n[[package]]\nname = \"anyio\"\nversion = \"3.3.2\"\ndescription = \"timeout\"\nfiles = \"fe323e99bef082f4386bdcbd...\n\n[[package]]\nname = \"sniffio\"\nversion = \"4.4.3\"\ndescription = \"timeout\"\nfiles = \"7d7e905aec26e8e48299d8f3...\n\n[[package]]\nname = \"certifi\"\nversion = \"5.5.4\"\ndescription = \"transport\"\nfiles = \"0d1cab0176bc30c56d51961f...\n\n[[package]]\nname = \"idna\"\nversion = \"6.6.0\"\ndescription = \"http client\"\nfiles = \"30d63faf65ff22d6246eec95...\n\n[[package]]\nname = \"langchain\"\nversion = \"7.0.1\"\ndescription = \"http client\"\nfiles = \"f2b6fb8359d26a375253ef63...\n\n[[package]]\nname = \"langchain-core\"\nversion = \"8.1.2\"\ndescription = \"proxy\"\nfiles = \"60a4443a494f208adf01e8c3...\n\n[[package]]\nname = \"tenacity\"\nversion = \"9.2.3\"\ndescription = \"transport\"\nfiles = \"34f65532e5f80139a5f31452...\n\n[[package]]\nname = \"rich\"\nversion = \"10.3.4\"\ndescription = \"timeout\"\nfiles = \"6100c5b6e3e84ead585e5e11...\n\n[[package]]\nname = \"textual\"\nversion = \"11.4.0\"\ndescription = \"proxy\"\nfiles = \"6237d615221a754d8f8af89c...\n\n[[package]]\nname = \"httpx\"\nversion = \"0.5.1\"\ndescription = \"wheel\"\nfiles = \"51e7a0a7aa580dff66ac35c1...\n\n[[package]]\nname = \"httpcore\"\nversion = \"1.6.2\"\ndescription = \"transport\"\nfiles = \"2eef764fc6be3cfb1086ae77...\n\n[[package]]\nname = \"h11\"\nversion = \"2.0.3\"\ndescription = \"transport\"\nfiles = \"0466fdc2acee5807335b4538...\n\n[[package]]\nname = \"anyio\"\nversion = \"3.1.4\"\ndescription = \"wheel\"\nfiles = \"2249d133023362bb441ea771...\n\n[[package]]\nname = \"sniffio\"\nversion = \"4.2.0\"\ndescription = \"http client\"\nfiles = \"37aebd56376b3630e2add866...\n\n[[package]]\nname = \"certifi\"\nversion = \"5.3.1\"\ndescription = \"http client\"\nfiles = \"1d9aea6aa46a16100e13b6cb...\n\n[[package]]\nname = \"idna\"\nversion = \"6.4.2\"\ndescription = \"wheel\"\nfiles = \"31a681e0fe6c799434bf9fe0...\n\n[[package]]\nname = \"langchain\"\nversion = \"7.5.3\"\ndescription = \"timeout\"\nfiles = \"e30da529ec583eab7338a843...\n\n[[package]]\nname = \"langchain-core\"\nversion = \"8.6.4\"\ndescription = \"http client\"\nfiles = \"eb0b3cc3fe436b7e9689c6c5...\n\n[[package]]\nname = \"tenacity\"\nversion = \"9.0.0\"\ndescription = \"timeout\"\nfiles = \"1dc6cb2fd2bd265a80746ae8...\n\n[[package]]\nname = \"rich\"\nversion = \"10.1.1\"\ndescription = \"timeout\"\nfiles = \"b1b9e7496a095ecfe092470f...\n\n[[package]]\nname = \"textual\"\nversion = \"11.2.2\"\ndescription = \"transport\"\nfiles = \"74640682ef6bb88e0696c5f4...\n\n[[package]]\nname = \"httpx\"\nversion = \"0.3.3\"\ndescription = \"http client\"\nfiles = \"12483a81dfcdfef32b763142...\n\n[[package]]\nname = \"httpcore\"\nversion = \"1.4.4\"\ndescription = \"timeout\"\nfiles = \"b76182dd93cb3d2962ee46a0...\n\n[[package]]\nname = \"h11\"\nversion = \"2.5.0\"\ndescription = \"wheel\"\nfiles = \"b09df0095aad56bb440aaf60...\n\n[[package]]\nname = \"anyio\"\nversion = \"3.6.1\"\ndescription = \"http client\"\nfiles = \"1652304c1e7eda0ee99fc2f5...\n\n[[package]]\nname = \"sniffio\"\nversion = \"4.0.2\"\ndescription = \"proxy\"\nfiles = \"5155e9ac2223db9050001cc4...\n\n[[package]]\nname = \"certifi\"\nversion = \"5.1.3\"\ndescription = \"proxy\"\nfiles = \"627255378f188a60522fc680...\n\n[[package]]\nname = \"idna\"\nversion = \"6.2.4\"\ndescription = \"proxy\"\nfiles = \"cc0ba89b0417b444ffae9e08...\n\n[[package]]\nname = \"langchain\"\nversion = \"7.3.0\"\ndescription = \"http client\"\nfiles = \"b521477d21e3181b87b28417...\n\n[[package]]\nname = \"langchain-core\"\nversion = \"8.4.1\"\ndescription = \"http client\"\nfiles = \"328551412123c71f0f9bd5d0...\n\n[[package]]\nname = \"tenacity\"\nversion = \"9.5.2\"\ndescription = \"transport\"\nfiles = \"d2c9286635690f10d89e600d...\n\n[[package]]\nname = \"rich\"\nversion = \"10.6.3\"\ndescription = \"wheel\"\nfiles = \"14d461f3cd10d94a57c4d2e1...\n\n[[package]]\nname = \"textual\"\nversion = \"11.0.4\"\ndescription = \"transport\"\nfiles = \"5d7f46378be261dad5d0341c...\n\n[[package]]\nname = \"httpx\"\nversion = \"0.1.0\"\ndescription = \"wheel\"\nfiles = \"4ba2a754e23776920803f34b...\n\n[[package]]\nname = \"httpcore\"\nversion = \"1.2.1\"\ndescription = \"http client\"\nfiles = \"b620efc8fe231f92bc224dd0...\n\n[[package]]\nname = \"h11\"\nversion = \"2.3.2\"\ndescription = \"timeout\"\nfiles = \"36aa2de9572ae3af25c8e847...\n\n[[package]]\nname = \"anyio\"\nversion = \"3.4.3\"\ndescription = \"transport\"\nfiles = \"c4a5b0f26c17502d9508f790...\n\n[[package]]\nname = \"sniffio\"\nversion = \"4.5.4\"\ndescription = \"timeout\"\nfiles = \"c64ba5e63e23adfa7f799049...\n\n[[package]]\nname = \"certifi\"\nversion = \"5.6.0\"\ndescription = \"timeout\"\nfiles = \"43381a14b4038f09386c8d2b...\n\n[[package]]\nname = \"idna\"\nversion = \"6.0.1\"\ndescription = \"proxy\"\nfiles = \"b8d6edae64d29ec52db53e0a...\n\n[[package]]\nname = \"langchain\"\nversion = \"7.1.2\"\ndescription = \"wheel\"\nfiles = \"9b72339fdcb27c47bd9f00a6...\n\n[[package]]\nname = \"langchain-core\"\nversion = \"8.2.3\"\ndescription = \"proxy\"\nfiles = \"20fa828cbc48468a354afff3...\n\n[[package]]\nname = \"tenacity\"\nversion = \"9.3.4\"\ndescription = \"transport\"\nfiles = \"c1d8b0105cbbe6b5b4271c41...\n\n[[package]]\nname = \"rich\"\nversion = \"10.4.0\"\ndescription = \"proxy\"\nfiles = \"bd0c88a1c44cab72567f8514...\n\n[[package]]\nname = \"textual\"\nversion = \"11.5.1\"\ndescription = \"wheel\"\nfiles = \"493bc91754f6de9e3ea8f133...\n\n[[package]]\nname = \"httpx\"\nversion = \"0.6.2\"\ndescription = \"http client\"\nfiles = \"7f697d71da57f4817ff4d73c...\n\n[[package]]\nname = \"httpcore\"\nversion = \"1.0.3\"\ndescription = \"proxy\"\nfiles = \"c1c09ac1cbdd92a71772cf56...\n\n[[package]]\nname = \"h11\"\nversion = \"2.1.4\"\ndescription = \"transport\"\nfiles = \"eff7cab451ca4a6ac0cc90f8...\n\n[[package]]\nname = \"anyio\"\nversion = \"3.2.0\"\ndescription = \"http client\"\nfiles = \"aefc6207e6acab03b2dc2d27...\n\n[[package]]\nname = \"sniffio\"\nversion = \"4.3.1\"\ndescription = \"wheel\"\nfiles = \"62ebe427f1e99ce14f13f37f...\n\n[[package]]\nname = \"certifi\"\nversion = \"5.4.2\"\ndescription = \"transport\"\nfiles = \"4344438c83707d57b600bc48...\n\n[[package]]\nname = \"idna\"\nversion = \"6.5.3\"\ndescription = \"proxy\"\nfiles = \"6aae3a828e7a7e92b7729fe9...\n\n[[package]]\nname = \"langchain\"\nversion = \"7.6.4\"\ndescription = \"transport\"\nfiles = \"ec8052530b3be8f9dfd4e04a...\n\n[[package]]\nname = \"langchain-core\"\nversion = \"8.0.0\"\ndescription = \"proxy\"\nfiles = \"dc6fdc9d693abf990bd93f84...\n\n[[package]]\nname = \"tenacity\"\nversion = \"9.1.1\"\ndescription = \"wheel\"\nfiles = \"c1e1c675fbbb3314b356abbb...\n\n[[package]]\nname = \"rich\"\nversion = \"10.2.2\"\ndescription = \"http client\"\nfiles = \"09cdd949dc0d2a21ae1946da...\n\n[[package]]\nname = \"textual\"\nversion = \"11.3.3\"\ndescription = \"http client\"\nfiles = \"a57d569329ca284a24ab2dfc...\n\n[[package]]\nname = \"httpx\"\nversion = \"0.4.4\"\ndescription = \"timeout\"\nfiles = \"e00abab9845ebcee7b3600f2...\n\n[[package]]\nname = \"httpcore\"\nversion = \"1.5.0\"\ndescription = \"http client\"\nfiles = \"75790561605fac2915764f90...\n\n[[package]]\nname = \"h11\"\nversion = \"2.6.1\"\ndescription = \"timeout\"\nfiles = \"c0628fab210f4f7dcf48e039...\n\n[[package]]\nname = \"anyio\"\nversion = \"3.0.2\"\ndescription = \"timeout\"\nfiles = \"5f30e2ef49c05d8145aa2586...\n\n[[package]]\nname = \"sniffio\"\nversion = \"4.1.3\"\ndescription = \"timeout\"\nfiles = \"be1dc5bfe90d2bfc33b4dd8b...\n\n[[package]]\nname = \"certifi\"\nversion = \"5.2.4\"\ndescription = \"http client\"\nfiles = \"64397c7da80994607d10654a...\n\n[[package]]\nname = \"idna\"\nversion = \"6.3.0\"\ndescription = \"http client\"\nfiles = \"aee1efd25c14357ed3b43549...\n\n[[package]]\nname = \"langchain\"\nversion = \"7.4.1\"\ndescription = \"timeout\"\nfiles = \"42934da5fbab0c9fc15594ab...\n\n[[package]]\nname = \"langchain-core\"\nversion = \"8.5.2\"\ndescription = \"transport\"\nfiles = \"cc5a9032a6da75c1ff2c9757...\n\n[[package]]\nname = \"tenacity\"\nversion = \"9.6.3\"\ndescription = \"wheel\"\nfiles = \"e5b22f00f35d9eef8c5058f9...\n\n[[package]]\nname = \"rich\"\nversion = \"10.0.4\"\ndescription = \"timeout\"\nfiles = \"5d8cca554b6b62193b5d54fb...\n\n[[package]]\nname = \"textual\"\nversion = \"11.1.0\"\ndescription = \"transport\"\nfiles = \"e8d92ca591967e2529d87554...\n\n[[package]]\nname = \"httpx\"\nversion = \"0.2.1\"\ndescription = \"timeout\"\nfiles = \"0cdf1adf53a42c6ece7bbed3...\n\n[[package]]\nname = \"httpcore\"\nversion = \"1.3.2\"\ndescription = \"proxy\"\nfiles = \"a1cb424f3d8090def45488cd...\n\n[[package]]\nname = \"h11\"\nversion = \"2.4.3\"\ndescription = \"wheel\"\nfiles = \"419a3ccb31a0a89a25d4d356...\n\n[[package]]\nname = \"anyio\"\nversion = \"3.5.4\"\ndescription = \"transport\"\nfiles = \"3acfc8b51c44a48246896be5...\n\n[[package]]\nname = \"sniffio\"\nversion = \"4.6.0\"\ndescription = \"http client\"\nfiles = \"fddbb89c87a2696cee9555c3...\n\n[[package]]\nname = \"certifi\"\nversion = \"5.0.1\"\ndescription = \"timeout\"\nfiles = \"4ba09e29aff997cef988e01d...\n\n[[package]]\nname = \"idna\"\nversion = \"6.1.2\"\ndescription = \"transport\"\nfiles = \"82edba0f1c1cced21c1e5e0d...\n\n[[package]]\nname = \"langchain\"\nversion = \"7.2.3\"\ndescription = \"proxy\"\nfiles = \"b2052dd9f703da4c0d170721...\n\n[[package]]\nname = \"langchain-core\"\nversion = \"8.3.4\"\ndescription = \"proxy\"\nfiles = \"112497fab6d0539969f3f919...\n\n[[package]]\nname = \"tenacity\"\nversion = \"9.4.0\"\ndescription = \"timeout\"\nfiles = \"deb75a138e3229c520bd1d00...\n\n[[package]]\nname = \"rich\"\nversion = \"10.5.1\"\ndescription = \"timeout\"\nfiles = \"7f0499a8ec2d89569284e1f0...\n\n[[package]]\nname = \"textual\"\nversion = \"11.6.2\"\ndescription = \"proxy\"\nfiles = \"e1096528384e5dab4942f9e1...\n\n[[package]]\nname = \"httpx\"\nversion = \"0.0.3\"\ndescription = \"timeout\"\nfiles = \"42f2335aa16ca0efc8b0bd96...\n\n[[package]]\nname = \"httpcore\"\nversion = \"1.1.4\"\ndescription = \"timeout\"\nfiles = \"2c92176d6fc53342ee4bbd3d...\n\n[[package]]\nname = \"h11\"\nversion = \"2.2.0\"\ndescription = \"http client\"\nfiles = \"92c148605471e3d75e0b2489...\n\n[[package]]\nname = \"anyio\"\nversion = \"3.3.1\"\ndescription = \"wheel\"\nfiles = \"be463ab08682446604c2d726...\n\n[[package]]\nname = \"sniffio\"\nversion = \"4.4.2\"\ndescription = \"transport\"\nfiles = \"7e1e88b26d49dc1de1edde74...\n\n[[package]]\nname = \"certifi\"\nversion = \"5.5.3\"\ndescription = \"transport\"\nfiles = \"a91f96148a703247b6692e44...\n\n[[package]]\nname = \"idna\"\nversion = \"6.6.4\"\ndescription = \"wheel\"\nfiles = \"228a1aa23d2db82ea3b247a6...\n\n[[package]]\nname = \"langchain\"\nversion = \"7.0.0\"\ndescription = \"http client\"\nfiles = \"da1977296e895eeba31201ee...\n\nhttpx==0.28.1 --hash=sha256:9f2c41ab7e0d5b3c8f6a1e4d70c9b2a5\n[[package]]\nname = \"langchain-core\"\nversion = \"8.1.1\"\ndescription = \"proxy\"\nfiles = \"afd4f00416c634c1075c4fce...\n\n[[package]]\nname = \"tenacity\"\nversion = \"9.2.2\"\ndescription = \"wheel\"\nfiles = \"618bdb822ad2c5ef893904aa...\n\n[[package]]\nname = \"rich\"\nversion = \"10.3.3\"\ndescription = \"timeout\"\nfiles = \"4fa8ebeab366aca5ed6ac12a...\n\n[[package]]\nname = \"textual\"\nversion = \"11.4.4\"\ndescription = \"timeout\"\nfiles = \"60f5d49dfe13e164cbfff72b...\n\n[[package]]\nname = \"httpx\"\nversion = \"0.5.0\"\ndescription = \"proxy\"\nfiles = \"6733c3f016420a54f7b4db19...\n\n[[package]]\nname = \"httpcore\"\nversion = \"1.6.1\"\ndescription = \"timeout\"\nfiles = \"1939a1a0e059cd24dee71a9a...\n\n[[package]]\nname = \"h11\"\nversion = \"2.0.2\"\ndescription = \"transport\"\nfiles = \"e88f83b9c344da38aac8876d...\n\n[[package]]\nname = \"anyio\"\nversion = \"3.1.3\"\ndescription = \"timeout\"\nfiles = \"90ee53bb3f82bb99803858db...\n\n[[package]]\nname = \"sniffio\"\nversion = \"4.2.4\"\ndescription = \"transport\"\nfiles = \"f16427af847914902e13baf0...\n\n[[package]]\nname = \"certifi\"\nversion = \"5.3.0\"\ndescription = \"transport\"\nfiles = \"720a00b59ee53872b705b034...\n\n[[package]]\nname = \"idna\"\nversion = \"6.4.1\"\ndescription = \"wheel\"\nfiles = \"82a180d7e5665939e10fc9a1...\n\n[[package]]\nname = \"langchain\"\nversion = \"7.5.2\"\ndescription = \"transport\"\nfiles = \"048e7706818c85fa520fb82e...\n\n[[package]]\nname = \"langchain-core\"\nversion = \"8.6.3\"\ndescription = \"proxy\"\nfiles = \"88b09dcf58f28e6b6f23f44e...\n\n[[package]]\nname = \"tenacity\"\nversion = \"9.0.4\"\ndescription = \"transport\"\nfiles = \"c8e774063ea49c79f760987e...\n\n[[package]]\nname = \"rich\"\nversion = \"10.1.0\"\ndescription = \"transport\"\nfiles = \"5af6cb86b2ae7d805014bc1e...\n\n[[package]]\nname = \"textual\"\nversion = \"11.2.1\"\ndescription = \"http client\"\nfiles = \"3cad0908ded5cbee50901336...\n\n[[package]]\nname = \"httpx\"\nversion = \"0.3.2\"\ndescription = \"transport\"\nfiles = \"d9af0424b3491eec677096ea...\n\n[[package]]\nname = \"httpcore\"\nversion = \"1.4.3\"\ndescription = \"proxy\"\nfiles = \"ea5160c22fc250dc4886ab3e...\n\n[[package]]\nname = \"h11\"\nversion = \"2.5.4\"\ndescription = \"http client\"\nfiles = \"7edc9a8f6e3bf3172e4e99e0...\n\n[[package]]\nname = \"anyio\"\nversion = \"3.6.0\"\ndescription = \"wheel\"\nfiles = \"32c50041de6489101b2de76d...\n\n[[package]]\nname = \"sniffio\"\nversion = \"4.0.1\"\ndescription = \"transport\"\nfiles = \"22368b6547f58d911d6a684a...\n\n[[package]]\nname = \"certifi\"\nversion = \"5.1.2\"\ndescription = \"http client\"\nfiles = \"ddbd828509b14edc08e1b753...\n\n[[package]]\nname = \"idna\"\nversion = \"6.2.3\"\ndescription = \"timeout\"\nfiles = \"5851087e4c4681884dac2906...\n\n[[package]]\nname = \"langchain\"\nversion = \"7.3.4\"\ndescription = \"proxy\"\nfiles = \"0dbdc43786325eb1f175c93e...\n\n[[package]]\nname = \"langchain-core\"\nversion = \"8.4.0\"\ndescription = \"timeout\"\nfiles = \"0244f7d82440bdadb98163d8...\n\n[[package]]\nname = \"tenacity\"\nversion = \"9.5.1\"\ndescription = \"transport\"\nfiles = \"49f8da60eb760be0574f747b...\n\n[[package]]\nname = \"rich\"\nversion = \"10.6.2\"\ndescription = \"proxy\"\nfiles = \"66b0fd6e3d320e6fd1ea0e6d...\n\n[[package]]\nname = \"textual\"\nversion = \"11.0.3\"\ndescription = \"proxy\"\nfiles = \"cadf5c50c8a8498e33b47e08...\n\n[[package]]\nname = \"httpx\"\nversion = \"0.1.4\"\ndescription = \"wheel\"\nfiles = \"a5e04da247c91ba9c9999b15...\n\n[[package]]\nname = \"httpcore\"\nversion = \"1.2.0\"\ndescription = \"wheel\"\nfiles = \"fc92439219cde8678f8a0d87...\n\n[[package]]\nname = \"h11\"\nversion = \"2.3.1\"\ndescription = \"timeout\"\nfiles = \"c43909e3440625c95e2d6c4d...\n\n[[package]]\nname = \"anyio\"\nversion = \"3.4.2\"\ndescription = \"timeout\"\nfiles = \"9a53f8fc8cfc53d634ac0081...\n\n[[package]]\nname = \"sniffio\"\nversion = \"4.5.3\"\ndescription = \"transport\"\nfiles = \"76779f82b8222045496735c2...\n\n[[package]]\nname = \"certifi\"\nversion = \"5.6.4\"\ndescription = \"http client\"\nfiles = \"501ea22617627204afb349bf...\n\n[[package]]\nname = \"idna\"\nversion = \"6.0.0\"\ndescription = \"timeout\"\nfiles = \"1ad4dee2a1fdd01bdf66494d...\n\n[[package]]\nname = \"langchain\"\nversion = \"7.1.1\"\ndescription = \"http client\"\nfiles = \"059789aeaa927aba86b32726...\n\n[[package]]\nname = \"langchain-core\"\nversion = \"8.2.2\"\ndescription = \"wheel\"\nfiles = \"40bb6e408f2f5d0f1bdbc77f...\n\n[[package]]\nname = \"tenacity\"\nversion = \"9.3.3\"\ndescription = \"transport\"\nfiles = \"2a9594027f5e8b6d7147208c...\n\n[[package]]\nname = \"rich\"\nversion = \"10.4.4\"\ndescription = \"wheel\"\nfiles = \"1087d07e83c947724242dc1d...\n\n[[package]]\nname = \"textual\"\nversion = \"11.5.0\"\ndescription = \"proxy\"\nfiles = \"b5c4a84460af8fcd07d42341...\n\n[[package]]\nname = \"httpx\"\nversion = \"0.6.1\"\ndescription = \"proxy\"\nfiles = \"903ea3182f80e162712ce953...\n\n[[package]]\nname = \"httpcore\"\nversion = \"1.0.2\"\ndescription = \"timeout\"\nfiles = \"135534fe36024269605d5605...\n\n[[package]]\nname = \"h11\"\nversion = \"2.1.3\"\ndescription = \"wheel\"\nfiles = \"b4dc915bb50ba02dacb56b17...\n\n[[package]]\nname = \"anyio\"\nversion = \"3.2.4\"\ndescription = \"proxy\"\nfiles = \"37db057ebfba02ff565f3b39...\n\n[[package]]\nname = \"sniffio\"\nversion = \"4.3.0\"\ndescription = \"timeout\"\nfiles = \"c689c8eb9985c13aab9a373c...\n\n[[package]]\nname = \"certifi\"\nversion = \"5.4.1\"\ndescription = \"wheel\"\nfiles = \"b3e6e541ff4f900822d4bffc...\n\n[[package]]\nname = \"idna\"\nversion = \"6.5.2\"\ndescription = \"timeout\"\nfiles = \"fbea2c0be951fcab3bbe7f6f...\n\n[[package]]\nname = \"langchain\"\nversion = \"7.6.3\"\ndescription = \"wheel\"\nfiles = \"52dde8a1a90f346799665879...\n\n[[package]]\nname = \"langchain-core\"\nversion = \"8.0.4\"\ndescription = \"proxy\"\nfiles = \"b24290cf94dd3e35117e506e...\n\n[[package]]\nname = \"tenacity\"\nversion = \"9.1.0\"\ndescription = \"http client\"\nfiles = \"bf3a3018456c4c01fec4b941...\n\n[[package]]\nname = \"rich\"\nversion = \"10.2.1\"\ndescription = \"timeout\"\nfiles = \"dd0dcf8a5613dfda41b0ac5b...\n\n[[package]]\nname = \"textual\"\nversion = \"11.3.2\"\ndescription = \"wheel\"\nfiles = \"847c3302bb83166fa843995d...\n\n[[package]]\nname = \"httpx\"\nversion = \"0.4.3\"\ndescription = \"proxy\"\nfiles = \"eb883bef839535ee95fbd24d...\n\n[[package]]\nname = \"httpcore\"\nversion = \"1.5.4\"\ndescription = \"proxy\"\nfiles = \"3110d6d9dc166d70992f2952...\n\n[[package]]\nname = \"h11\"\nversion = \"2.6.0\"\ndescription = \"timeout\"\nfiles = \"2de5fd1d7410b61b67b7f360...\n\n[[package]]\nname = \"anyio\"\nversion = \"3.0.1\"\ndescription = \"timeout\"\nfiles = \"3cab3030625b9b448711e45c...\n\n[[package]]\nname = \"sniffio\"\nversion = \"4.1.2\"\ndescription = \"wheel\"\nfiles = \"5cf9b8b7e001a5bd429d3fac...\n\n[[package]]\nname = \"certifi\"\nversion = \"5.2.3\"\ndescription = \"transport\"\nfiles = \"a24cf4be973cc7b0645b1721...\n\n[[package]]\nname = \"idna\"\nversion = \"6.3.4\"\ndescription = \"proxy\"\nfiles = \"39f519a2391af855ecf48c16...\n\n[[package]]\nname = \"langchain\"\nversion = \"7.4.0\"\ndescription = \"wheel\"\nfiles = \"6b5049d6ff60e3483fc73617...\n\n[[package]]\nname = \"langchain-core\"\nversion = \"8.5.1\"\ndescription = \"timeout\"\nfiles = \"3b95a062f41d956ac12927cb...\n\n[[package]]\nname = \"tenacity\"\nversion = \"9.6.2\"\ndescription = \"wheel\"\nfiles = \"af8a72702fd39a3b78991f91...\n\n[[package]]\nname = \"rich\"\nversion = \"10.0.3\"\ndescription = \"timeout\"\nfiles = \"8b81fdefdadab93ffd2407fe...\n\n[[package]]\nname = \"textual\"\nversion = \"11.1.4\"\ndescription = \"timeout\"\nfiles = \"ff53525a2baa000c6eb157ce...\n\n[[package]]\nname = \"httpx\"\nversion = \"0.2.0\"\ndescription = \"wheel\"\nfiles = \"e9baa80c80486771ba0b6694...\n\n[[package]]\nname = \"httpcore\"\nversion = \"1.3.1\"\ndescription = \"timeout\"\nfiles = \"17a1fd9a6664ee11fa98ea24...\n\n[[package]]\nname = \"h11\"\nversion = \"2.4.2\"\ndescription = \"proxy\"\nfiles = \"c0cb3f6d954dbe2951df1836...\n\n[[package]]\nname = \"anyio\"\nversion = \"3.5.3\"\ndescription = \"http client\"\nfiles = \"2baadbd6a80efd33fee8e5a1...\n\n[[package]]\nname = \"sniffio\"\nversion = \"4.6.4\"\ndescription = \"http client\"\nfiles = \"71061fba0659e7b16da352aa...\n\n[[package]]\nname = \"certifi\"\nversion = \"5.0.0\"\ndescription = \"http client\"\nfiles = \"0ea3cba640a8ac58f5c844cc...\n\n[[package]]\nname = \"idna\"\nversion = \"6.1.1\"\ndescription = \"transport\"\nfiles = \"972a7a24bba36e182bfc7e8f...\n\n[[package]]\nname = \"langchain\"\nversion = \"7.2.2\"\ndescription = \"http client\"\nfiles = \"542b9150bb7533d6e34efeb3...\n\n[[package]]\nname = \"langchain-core\"\nversion = \"8.3.3\"\ndescription = \"proxy\"\nfiles = \"7eac29e8b0ff7ed60efcc660...\n\n[[package]]\nname = \"tenacity\"\nversion = \"9.4.4\"\ndescription = \"proxy\"\nfiles = \"96a2877076ba1f6092b1ed17...\n\n[[package]]\nname = \"rich\"\nversion = \"10.5.0\"\ndescription = \"timeout\"\nfiles = \"2b60e0f148984bcb59165b9f...\n\n[[package]]\nname = \"textual\"\nversion = \"11.6.1\"\ndescription = \"proxy\"\nfiles = \"24ff1091098d3ed1f12e817e...\n\n[[package]]\nname = \"httpx\"\nversion = \"0.0.2\"\ndescription = \"proxy\"\nfiles = \"56b91a89bc629b6715f65e8e...\n\n[[package]]\nname = \"httpcore\"\nversion = \"1.1.3\"\ndescription = \"transport\"\nfiles = \"c9cf2fcd619c33f1921a194c...\n\n[[package]]\nname = \"h11\"\nversion = \"2.2.4\"\ndescription = \"transport\"\nfiles = \"84c3a1889d47cf9d1479fab0...\n\n[[package]]\nname = \"anyio\"\nversion = \"3.3.0\"\ndescription = \"http client\"\nfiles = \"8334d23b4dfde4f2d9308e57...\n\n[[package]]\nname = \"sniffio\"\nversion = \"4.4.1\"\ndescription = \"transport\"\nfiles = \"d0a53f9a725d8ef3755ee861...\n\n[[package]]\nname = \"certifi\"\nversion = \"5.5.2\"\ndescription = \"proxy\"\nfiles = \"ebe13e5a7280f5e109d5b6a9...\n\n[[package]]\nname = \"idna\"\nversion = \"6.6.3\"\ndescription = \"timeout\"\nfiles = \"7d61e54afd43d39e3383b969...\n\n[[package]]\nname = \"langchain\"\nversion = \"7.0.4\"\ndescription = \"transport\"\nfiles = \"ca20440e626e9ce7a74c0ef8...\n\n[[package]]\nname = \"langchain-core\"\nversion = \"8.1.0\"\ndescription = \"transport\"\nfiles = \"75bc6b29f12c2ea287bf9e3c...\n\n[[package]]\nname = \"tenacity\"\nversion = \"9.2.1\"\ndescription = \"timeout\"\nfiles = \"92d1bead7ee83c23cb0a55bf...\n\n[[package]]\nname = \"rich\"\nversion = \"10.3.2\"\ndescription = \"transport\"\nfiles = \"3cb3c7813404c9fceedce4fa...\n\n[[package]]\nname = \"textual\"\nversion = \"11.4.3\"\ndescription = \"proxy\"\nfiles = \"2330690354324e36e4fe8168...\n\n[[package]]\nname = \"httpx\"\nversion = \"0.5.4\"\ndescription = \"timeout\"\nfiles = \"10d58bc6692a9ce9cd054209...\n\n[[package]]\nname = \"httpcore\"\nversion = \"1.6.0\"\ndescription = \"http client\"\nfiles = \"1fec3d1913d7ae01e1bfbe6a...\n\n[[package]]\nname = \"h11\"\nversion = \"2.0.1\"\ndescription = \"wheel\"\nfiles = \"08348f2f7c18556540839fd9...\n\n[[package]]\nname = \"anyio\"\nversion = \"3.1.2\"\ndescription = \"timeout\"\nfiles = \"1dff2e04682e2d89e7defca1...\n\n[[package]]\nname = \"sniffio\"\nversion = \"4.2.3\"\ndescription = \"proxy\"\nfiles = \"63613109225e083407ba8cff...\n\n[[package]]\nname = \"certifi\"\nversion = \"5.3.4\"\ndescription = \"proxy\"\nfiles = \"87edd026d6fa44f0ad865000...\n\n[[package]]\nname = \"idna\"\nversion = \"6.4.0\"\ndescription = \"proxy\"\nfiles = \"2a80c3539fe37f7b0945238c...\n\n[[package]]\nname = \"langchain\"\nversion = \"7.5.1\"\ndescription = \"http client\"\nfiles = \"de093bddb47b1de96be3fe74...\n\n[[package]]\nname = \"langchain-core\"\nversion = \"8.6.2\"\ndescription = \"wheel\"\nfiles = \"b9784fd7a525c3656ba00e67...\n\n[[package]]\nname = \"tenacity\"\nversion = \"9.0.3\"\ndescription = \"proxy\"\nfiles = \"668badf188208cae42e15e17...\n\n[[package]]\nname = \"rich\"\nversion = \"10.1.4\"\ndescription = \"http client\"\nfiles = \"098254ed33bc8e04130552cd...\n\n[[package]]\nname = \"textual\"\nversion = \"11.2.0\"\ndescription = \"wheel\"\nfiles = \"398ae0c471677acd9b8735ae...\n\n[[package]]\nname = \"httpx\"\nversion = \"0.3.1\"\ndescription = \"transport\"\nfiles = \"fcea47f58e0219006e9e2dab...\n\n[[package]]\nname = \"httpcore\"\nversion = \"1.4.2\"\ndescription = \"timeout\"\nfiles = \"922c5cac0b89d7976eb9bf3e...\n\n[[package]]\nname = \"h11\"\nversion = \"2.5.3\"\ndescription = \"http client\"\nfiles = \"afa8aef41f27cef1305c7ad4...\n\n[[package]]\nname = \"anyio\"\nversion = \"3.6.4\"\ndescription = \"http client\"\nfiles = \"19bfbfe7bda080c08057c5dc...\n\n[[package]]\nname = \"sniffio\"\nversion = \"4.0.0\"\ndescription = \"transport\"\nfiles = \"43814636522dd6fd62365735...\n\n[[package]]\nname = \"certifi\"\nversion = \"5.1.1\"\ndescription = \"timeout\"\nfiles = \"6b767470b89857448a11bb05...\n\n[[package]]\nname = \"idna\"\nversion = \"6.2.2\"\ndescription = \"wheel\"\nfiles = \"7d6aa58d52c393aaf3ad6dc6...\n\n[[package]]\nname = \"langchain\"\nversion = \"7.3.3\"\ndescription = \"timeout\"\nfiles = \"5f15f914bd30a9365c4f0f3e...\n\n[[package]]\nname = \"langchain-core\"\nversion = \"8.4.4\"\ndescription = \"transport\"\nfiles = \"c848f0d6ee029604f2ac9c25...\n\n[[package]]\nname = \"tenacity\"\nversion = \"9.5.0\"\ndescription = \"timeout\"\nfiles = \"d25050a1603d2387925f6bc1...\n\n[[package]]\nname = \"rich\"\nversion = \"10.6.1\"\ndescription = \"timeout\"\nfiles = \"ccfe03f11d96c2637786e11d...\n\n[[package]]\nname = \"textual\"\nversion = \"11.0.2\"\ndescription = \"transport\"\nfiles = \"7b0a94274032295d42d49cc7...\n\n[[package]]\nname = \"httpx\"\nversion = \"0.1.3\"\ndescription = \"timeout\"\nfiles = \"8290f2d2348db2180cebf54a...\n\n[[package]]\nname = \"httpcore\"\nversion = \"1.2.4\"\ndescription = \"proxy\"\nfiles = \"0ef49bda2f2ce64a930464a1...\n\n[[package]]\nname = \"h11\"\nversion = \"2.3.0\"\ndescription = \"timeout\"\nfiles = \"246dbe522f876e64c4516ba9...\n\n[[package]]\nname = \"anyio\"\nversion = \"3.4.1\"\ndescription = \"wheel\"\nfiles = \"de1acdf3988e5fcbadc71c61...\n\n[[package]]\nname = \"sniffio\"\nversion = \"4.5.2\"\ndescription = \"proxy\"\nfiles = \"78765f38cdb199d6f1f9e9f7...\n\n[[package]]\nname = \"certifi\"\nversion = \"5.6.3\"\ndescription = \"transport\"\nfiles = \"b5b23841302ef13869aaccc2...\n\n[[package]]\nname = \"idna\"\nversion = \"6.0.4\"\ndescription = \"proxy\"\nfiles = \"3964dcb905c98974a2745d4e...\n\n[[package]]\nname = \"langchain\"\nversion = \"7.1.0\"\ndescription = \"wheel\"\nfiles = \"de48b455ed5eebf98ed28b78...\n\n[[package]]\nname = \"langchain-core\"\nversion = \"8.2.1\"\ndescription = \"timeout\"\nfiles = \"e309552a1737e7a3597b978f...\n\n[[package]]\nname = \"tenacity\"\nversion = \"9.3.2\"\ndescription = \"http client\"\nfiles = \"94fcd3058c9e37f508bc188b...\n\n[[package]]\nname = \"rich\"\nversion = \"10.4.3\"\ndescription = \"wheel\"\nfiles = \"dfed047459bbd4f6393a8fae...\n\n[[package]]\nname = \"textual\"\nversion = \"11.5.4\"\ndescription = \"timeout\"\nfiles = \"91283bd1232d07d5516a9077...\n\n[[package]]\nname = \"httpx\"\nversion = \"0.6.0\"\ndescription = \"http client\"\nfiles = \"d7bc127bc27407ead43e64a4...\n\n[[package]]\nname = \"httpcore\"\nversion = \"1.0.1\"\ndescription = \"wheel\"\nfiles = \"046ab64da76f6cfa4c8802a2...\n\n[[package]]\nname = \"h11\"\nversion = \"2.1.2\"\ndescription = \"wheel\"\nfiles = \"6c3d920941d35c48ad240cc1...\n\n[[package]]\nname = \"anyio\"\nversion = \"3.2.3\"\ndescription = \"proxy\"\nfiles = \"2ba590a49f720cec5f81b000...\n\n[[package]]\nname = \"sniffio\"\nversion = \"4.3.4\"\ndescription = \"wheel\"\nfiles = \"5e42889a6f14c9bcaa04a6f9...\n\n[[package]]\nname = \"certifi\"\nversion = \"5.4.0\"\ndescription = \"http client\"\nfiles = \"c10726ddf0637b63ef5e8f0d...\n\n[[package]]\nname = \"idna\"\nversion = \"6.5.1\"\ndescription = \"wheel\"\nfiles = \"5a0c9b3dfeb0c3efc6e13faa...\n\n[[package]]\nname = \"langchain\"\nversion = \"7.6.2\"\ndescription = \"wheel\"\nfiles = \"0a668bf354a3304c1c8c84f1...\n\n[[package]]\nname = \"langchain-core\"\nversion = \"8.0.3\"\ndescription = \"transport\"\nfiles = \"b7b2566d2ae493619c82efed...\n\n[[package]]\nname = \"tenacity\"\nversion = \"9.1.4\"\ndescription = \"transport\"\nfiles = \"655906e9316fd45ff205e4e3...\n\n[[package]]\nname = \"rich\"\nversion = \"10.2.0\"\ndescription = \"http client\"\nfiles = \"a71bd5a34b51c306f914c054...\n\n[[package]]\nname = \"textual\"\nversion = \"11.3.1\"\ndescription = \"transport\"\nfiles = \"1e8b5064bfac53a3b41865cc...\n\n[[package]]\nname = \"httpx\"\nversion = \"0.4.2\"\ndescription = \"timeout\"\nfiles = \"e9033d246b1c05c8adc6da39...\n\n[[package]]\nname = \"httpcore\"\nversion = \"1.5.3\"\ndescription = \"transport\"\nfiles = \"dbaa862e4fe45f20d24b7b77...\n\n[[package]]\nname = \"h11\"\nversion = \"2.6.4\"\ndescription = \"proxy\"\nfiles = \"0ff9fc00555786d4e6936f7e...\n\n[[package]]\nname = \"anyio\"\nversion = \"3.0.0\"\ndescription = \"timeout\"\nfiles = \"874d127771af93870bafc647...\n\n[[package]]\nname = \"sniffio\"\nversion = \"4.1.1\"\ndescription = \"transport\"\nfiles = \"2808544ece0d32f1a5a1fdaa...\n\n[[package]]\nname = \"certifi\"\nversion = \"5.2.2\"\ndescription = \"http client\"\nfiles = \"a13d42f8887c3e47b92abb77...\n\n[[package]]\nname = \"idna\"\nversion = \"6.3.3\"\ndescription = \"timeout\"\nfiles = \"1854c03c125603d318f72c8f...\n\n[[package]]\nname = \"langchain\"\nversion = \"7.4.4\"\ndescription = \"http client\"\nfiles = \"0b9521766404ac9034a14b75...\n\n[[package]]\nname = \"langchain-core\"\nversion = \"8.5.0\"\ndescription = \"proxy\"\nfiles = \"9c8bacfd718e0de934c7e682...\n\n[[package]]\nname = \"tenacity\"\nversion = \"9.6.1\"\ndescription = \"wheel\"\nfiles = \"b45c99d274ad9eb9fc8f5645...\n\n[[package]]\nname = \"rich\"\nversion = \"10.0.2\"\ndescription = \"http client\"\nfiles = \"48b91e72b874edb6c4af48ad...\n\n[[package]]\nname = \"textual\"\nversion = \"11.1.3\"\ndescription = \"transport\"\nfiles = \"a8076032cdc3c0df095a6cd0...\n\n[[package]]\nname = \"httpx\"\nversion = \"0.2.4\"\ndescription = \"transport\"\nfiles = \"6e190c10a9e862ca7e88590b...\n\n[[package]]\nname = \"httpcore\"\nversion = \"1.3.0\"\ndescription = \"wheel\"\nfiles = \"f65c5e641ab9c5a193c4d017...\n\n[[package]]\nname = \"h11\"\nversion = \"2.4.1\"\ndescription = \"transport\"\nfiles = \"408ce097a8e3aa6035dc7a7f...\n\n[[package]]\nname = \"anyio\"\nversion = \"3.5.2\"\ndescription = \"wheel\"\nfiles = \"98a74ff5e7b0a514b1c2a315...\n\n[[package]]\nname = \"sniffio\"\nversion = \"4.6.3\"\ndescription = \"transport\"\nfiles = \"274df11b74eea32249409158...\n\n[[package]]\nname = \"certifi\"\nversion = \"5.0.4\"\ndescription = \"timeout\"\nfiles = \"7745a522f16ecd448220412b...\n\n[[package]]\nname = \"idna\"\nversion = \"6.1.0\"\ndescription = \"timeout\"\nfiles = \"3c46bccd55b2b6d4425dbccb...\n\n[[package]]\nname = \"langchain\"\nversion = \"7.2.1\"\ndescription = \"http client\"\nfiles = \"36a716221a65d7cefae371db...\n\n[[package]]\nname = \"langchain-core\"\nversion = \"8.3.2\"\ndescription = \"wheel\"\nfiles = \"fdfa297f1af1f2dbe210a2fe...\n\n[[package]]\nname = \"tenacity\"\nversion = \"9.4.3\"\ndescription = \"http client\"\nfiles = \"332b81a9d2771d1abd0fe9a5...\n\n[[package]]\nname = \"rich\"\nversion = \"10.5.4\"\ndescription = \"http client\"\nfiles = \"a4263344fef39d7bd9ce3add...\n\n[[package]]\nname = \"textual\"\nversion = \"11.6.0\"\ndescription = \"transport\"\nfiles = \"510279ce3dc0b0f23ecc4ccd...\n\n[[package]]\nname = \"httpx\"\nversion = \"0.0.1\"\ndescription = \"wheel\"\nfiles = \"4b0c6b074ff61dcb78155f44...\n\n[[package]]\nname = \"httpcore\"\nversion = \"1.1.2\"\ndescription = \"proxy\"\nfiles = \"a44a0099ff0d2d5fa30c2824...\n\n[[package]]\nname = \"h11\"\nversion = \"2.2.3\"\ndescription = \"http client\"\nfiles = \"454aa50ff4ffb3f4615c290b...\n\n[[package]]\nname = \"anyio\"\nversion = \"3.3.4\"\ndescription = \"timeout\"\nfiles = \"029619f1665a1a0e2f376f0b...\n\n[[package]]\nname = \"sniffio\"\nversion = \"4.4.0\"\ndescription = \"proxy\"\nfiles = \"8a52859eaaca595131d8f1dc...\n\n[[package]]\nname = \"certifi\"\nversion = \"5.5.1\"\ndescription = \"timeout\"\nfiles = \"ecb98a081feb48237cc03e72...\n\n[[package]]\nname = \"idna\"\nversion = \"6.6.2\"\ndescription = \"http client\"\nfiles = \"1061fdb73e3cac602acdd456...\n\n[[package]]\nname = \"langchain\"\nversion = \"7.0.3\"\ndescription = \"proxy\"\nfiles = \"77c3e7cd67c286ff20bfb884...\n\n[[package]]\nname = \"langchain-core\"\nversion = \"8.1.4\"\ndescription = \"transport\"\nfiles = \"f1c1bdf5ff07fe4db08f733d...\n\n[[package]]\nname = \"tenacity\"\nversion = \"9.2.0\"\ndescription = \"transport\"\nfiles = \"8bb13184586a8e0049b30e73...\n\n[[package]]\nname = \"rich\"\nversion = \"10.3.1\"\ndescription = \"http client\"\nfiles = \"364ea7188a22a8e49d733436...\n\n[[package]]\nname = \"textual\"\nversion = \"11.4.2\"\ndescription = \"wheel\"\nfiles = \"31a3b21cc775908975001dc4...\n\n[[package]]\nname = \"httpx\"\nversion = \"0.5.3\"\ndescription = \"http client\"\nfiles = \"bc90c58ed514303cb6c8c4f6...\n\n[[package]]\nname = \"httpcore\"\nversion = \"1.6.4\"\ndescription = \"timeout\"\nfiles = \"cc70c5c4d80be361d6bd8a14...\n\n[[package]]\nname = \"h11\"\nversion = \"2.0.0\"\ndescription = \"transport\"\nfiles = \"8ee861044e14635c89657647...\n",
+      "tool_call_id": "case-05-dependency-upgrade-tc007",
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m036",
+      "metadata": {},
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "The hash matches the internal index, so the pin is reproducible offline.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m037",
+      "metadata": {
+        "filler": "small_tool_run"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Let me check pyproject.toml with `grep -rn proxies src`.",
+      "tool_call_id": null,
+      "tool_calls": [
+        {
+          "arguments": "{\"command\": \"grep -rn proxies src\"}",
+          "id": "case-05-dependency-upgrade-tc008",
+          "name": "execute"
+        }
+      ]
+    },
+    {
+      "id": "case-05-dependency-upgrade-m038",
+      "metadata": {
+        "filler": "small_tool_run"
+      },
+      "name": "execute",
+      "pinned": false,
+      "role": "tool",
+      "text": "$ grep -rn proxies src\ncollected 0 items\ntests/test_http_client.py::test_HttpClient_001 PASSED\n    deprecation: the proxies argument is ignored\n    deprecation: the proxies argument is ignored\n    deprecation: the proxies argument is ignored\n    smoke script streamed 4 MiB without a timeout error\n    smoke script streamed 4 MiB without a timeout error\ntests/test_http_client.py::test_HttpClient_002 PASSED\n    hash verified for the pinned wheel\n    deprecation: the proxies argument is ignored\n    resolving dependencies against the internal index\nsrc/clients/retries.py::test_TimeoutPolicy_003 PASSED\n    hash verified for the pinned wheel\n    deprecation: the proxies argument is ignored\nscripts/smoke.py::test_TimeoutPolicy_004 PASSED\n    no conflicting requirements found\n    hash verified for the pinned wheel\n    no conflicting requirements found\n    no conflicting requirements found\nCHANGELOG.md::test_build_client_005 PASSED\n    hash verified for the pinned wheel\nsrc/clients/retries.py::test_proxy_argument_006 PASSED\n    no conflicting requirements found\n    resolving dependencies against the internal index\n    hash verified for the pinned wheel\n    resolving dependencies against the internal index\n    resolving dependencies against the internal index",
+      "tool_call_id": "case-05-dependency-upgrade-tc008",
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m039",
+      "metadata": {
+        "todo_items": 4,
+        "todo_step": 1
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Board update after the lock file reading.",
+      "tool_call_id": null,
+      "tool_calls": [
+        {
+          "arguments": "{\"todos\": [{\"content\": \"Read the changelog between the pin and the target\", \"id\": \"case-05-dependency-upgrade-todo00\", \"order\": 0, \"priority\": \"high\", \"status\": \"completed\"}, {\"content\": \"Confirm the lock file pin and its hash\", \"id\": \"case-05-dependency-upgrade-todo01\", \"order\": 1, \"priority\": \"medium\", \"status\": \"completed\"}, {\"content\": \"Fix the removed argument at its single call site\", \"id\": \"case-05-dependency-upgrade-todo02\", \"order\": 2, \"priority\": \"medium\", \"status\": \"in_progress\"}, {\"content\": \"Run the offline gate\", \"id\": \"case-05-dependency-upgrade-todo03\", \"order\": 3, \"priority\": \"medium\", \"status\": \"pending\"}]}",
+          "id": "case-05-dependency-upgrade-tc009",
+          "name": "write_todos"
+        }
+      ]
+    },
+    {
+      "id": "case-05-dependency-upgrade-m040",
+      "metadata": {
+        "todo_step": 1
+      },
+      "name": "write_todos",
+      "pinned": false,
+      "role": "tool",
+      "text": "Todos updated: 4 items, 2 completed, 2 open.",
+      "tool_call_id": "case-05-dependency-upgrade-tc009",
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m041",
+      "metadata": {
+        "filler": "assistant_note"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "The changelog mentions the removal three releases before it landed. I re-read scripts/smoke.py around `AsyncTransport` before settling on that.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m042",
+      "metadata": {
+        "filler": "boilerplate"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Running `pip check` now and reporting back; no other file changes in flight.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m043",
+      "metadata": {
+        "filler": "boilerplate"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Running `make smoke` now and reporting back; no other file changes in flight.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m044",
+      "metadata": {
+        "filler": "user_note"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "user",
+      "text": "Can we bump two majors in one pull request, or does that break the review?",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m045",
+      "metadata": {},
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Checking the resolved dependency graph for conflicts.",
+      "tool_call_id": null,
+      "tool_calls": [
+        {
+          "arguments": "{\"command\": \"pip check && pip install -r requirements.lock --dry-run\"}",
+          "id": "case-05-dependency-upgrade-tc010",
+          "name": "execute"
+        }
+      ]
+    },
+    {
+      "id": "case-05-dependency-upgrade-m046",
+      "metadata": {
+        "tool_output_chars": 17601,
+        "tool_output_lines": 300
+      },
+      "name": "execute",
+      "pinned": false,
+      "role": "tool",
+      "text": "$ pip check && pip install -r requirements.lock --dry-run\ncaptured 300 lines, exit status follows\n21:31:22 ERROR   deprecation: the proxies argument is ignor...\n10:21:18 ERROR   resolving dependencies against the interna...\n23:23:08 INFO    no conflicting requirements found\n13:28:00 WARNING deprecation: the proxies argument is ignor...\n08:50:17 INFO    smoke script streamed 4 MiB without a time...\n16:29:57 DEBUG   hash verified for the pinned wheel\n23:55:02 WARNING no conflicting requirements found\n15:29:48 DEBUG   resolving dependencies against the interna...\n20:36:53 DEBUG   deprecation: the proxies argument is ignor...\n14:14:50 WARNING hash verified for the pinned wheel\n09:04:29 INFO    resolving dependencies against the interna...\n07:16:48 INFO    hash verified for the pinned wheel\n13:48:07 INFO    resolving dependencies against the interna...\n03:46:03 INFO    resolving dependencies against the interna...\n06:51:01 ERROR   deprecation: the proxies argument is ignor...\n23:01:59 INFO    resolving dependencies against the interna...\n03:03:01 WARNING deprecation: the proxies argument is ignor...\n09:23:31 INFO    hash verified for the pinned wheel\n01:47:56 DEBUG   hash verified for the pinned wheel\n15:52:13 ERROR   resolving dependencies against the interna...\n20:41:50 INFO    deprecation: the proxies argument is ignor...\n23:25:08 INFO    no conflicting requirements found\n04:53:21 ERROR   smoke script streamed 4 MiB without a time...\n15:50:32 WARNING deprecation: the proxies argument is ignor...\n05:12:43 INFO    smoke script streamed 4 MiB without a time...\n22:40:42 DEBUG   smoke script streamed 4 MiB without a time...\n22:56:00 WARNING smoke script streamed 4 MiB without a time...\n03:47:28 WARNING hash verified for the pinned wheel\n02:20:57 ERROR   smoke script streamed 4 MiB without a time...\n13:21:26 INFO    resolving dependencies against the interna...\n19:29:54 ERROR   deprecation: the proxies argument is ignor...\n21:35:19 ERROR   smoke script streamed 4 MiB without a time...\n18:09:56 ERROR   smoke script streamed 4 MiB without a time...\n00:11:54 WARNING resolving dependencies against the interna...\n09:30:54 INFO    no conflicting requirements found\n11:01:39 ERROR   smoke script streamed 4 MiB without a time...\n03:06:07 INFO    deprecation: the proxies argument is ignor...\n03:38:27 DEBUG   resolving dependencies against the interna...\n11:04:50 DEBUG   no conflicting requirements found\n04:42:58 INFO    smoke script streamed 4 MiB without a time...\n00:45:25 INFO    smoke script streamed 4 MiB without a time...\n04:10:28 DEBUG   hash verified for the pinned wheel\n15:29:43 INFO    smoke script streamed 4 MiB without a time...\n15:28:08 INFO    smoke script streamed 4 MiB without a time...\n00:53:52 DEBUG   smoke script streamed 4 MiB without a time...\n14:54:15 ERROR   hash verified for the pinned wheel\n02:20:30 ERROR   deprecation: the proxies argument is ignor...\n20:59:55 WARNING no conflicting requirements found\n14:09:23 WARNING hash verified for the pinned wheel\n00:29:07 WARNING no conflicting requirements found\n13:25:05 INFO    no conflicting requirements found\n12:29:41 INFO    resolving dependencies against the interna...\n20:24:31 INFO    no conflicting requirements found\n09:16:22 ERROR   no conflicting requirements found\n18:46:41 WARNING deprecation: the proxies argument is ignor...\n22:58:07 INFO    smoke script streamed 4 MiB without a time...\n16:27:24 ERROR   smoke script streamed 4 MiB without a time...\n12:58:34 INFO    hash verified for the pinned wheel\n08:22:16 WARNING resolving dependencies against the interna...\n18:47:53 INFO    resolving dependencies against the interna...\n10:22:36 DEBUG   smoke script streamed 4 MiB without a time...\n06:31:40 INFO    resolving dependencies against the interna...\n17:41:24 INFO    smoke script streamed 4 MiB without a time...\n14:35:12 WARNING hash verified for the pinned wheel\n21:37:19 ERROR   resolving dependencies against the interna...\n21:37:08 DEBUG   smoke script streamed 4 MiB without a time...\n23:35:04 INFO    deprecation: the proxies argument is ignor...\n18:03:06 WARNING no conflicting requirements found\n17:22:54 INFO    deprecation: the proxies argument is ignor...\n07:09:26 INFO    smoke script streamed 4 MiB without a time...\n19:20:02 INFO    deprecation: the proxies argument is ignor...\n03:14:03 WARNING no conflicting requirements found\n08:09:48 DEBUG   no conflicting requirements found\n18:39:48 WARNING smoke script streamed 4 MiB without a time...\n14:28:13 ERROR   resolving dependencies against the interna...\n14:45:36 ERROR   no conflicting requirements found\n21:38:18 ERROR   no conflicting requirements found\n15:39:29 INFO    resolving dependencies against the interna...\n15:54:46 DEBUG   resolving dependencies against the interna...\n06:28:24 ERROR   resolving dependencies against the interna...\n18:19:43 ERROR   deprecation: the proxies argument is ignor...\n00:02:16 WARNING no conflicting requirements found\n20:15:24 DEBUG   no conflicting requirements found\n08:19:56 INFO    hash verified for the pinned wheel\n05:50:19 INFO    no conflicting requirements found\n09:02:33 ERROR   smoke script streamed 4 MiB without a time...\n02:58:26 DEBUG   deprecation: the proxies argument is ignor...\n20:28:35 INFO    deprecation: the proxies argument is ignor...\n20:12:18 INFO    hash verified for the pinned wheel\n11:04:03 INFO    no conflicting requirements found\n21:08:53 WARNING hash verified for the pinned wheel\n22:12:30 ERROR   no conflicting requirements found\n12:46:54 WARNING deprecation: the proxies argument is ignor...\n06:21:04 INFO    resolving dependencies against the interna...\n21:46:55 DEBUG   hash verified for the pinned wheel\n19:07:05 WARNING hash verified for the pinned wheel\n12:29:16 INFO    hash verified for the pinned wheel\n00:53:18 WARNING hash verified for the pinned wheel\n07:33:50 INFO    deprecation: the proxies argument is ignor...\n22:04:24 INFO    deprecation: the proxies argument is ignor...\n04:57:23 INFO    resolving dependencies against the interna...\n11:27:05 INFO    deprecation: the proxies argument is ignor...\n17:05:05 ERROR   resolving dependencies against the interna...\n00:09:05 ERROR   deprecation: the proxies argument is ignor...\n22:37:44 INFO    smoke script streamed 4 MiB without a time...\n17:52:51 WARNING smoke script streamed 4 MiB without a time...\n12:27:01 INFO    resolving dependencies against the interna...\n11:41:20 INFO    no conflicting requirements found\n03:17:41 DEBUG   hash verified for the pinned wheel\n19:08:51 DEBUG   deprecation: the proxies argument is ignor...\n12:20:55 DEBUG   deprecation: the proxies argument is ignor...\n05:36:02 INFO    resolving dependencies against the interna...\n22:10:52 ERROR   smoke script streamed 4 MiB without a time...\n21:44:58 INFO    hash verified for the pinned wheel\n20:12:47 ERROR   smoke script streamed 4 MiB without a time...\n06:54:08 INFO    deprecation: the proxies argument is ignor...\n06:03:20 INFO    no conflicting requirements found\n08:15:23 WARNING hash verified for the pinned wheel\n18:59:59 INFO    deprecation: the proxies argument is ignor...\n19:23:37 WARNING resolving dependencies against the interna...\n15:15:55 ERROR   resolving dependencies against the interna...\n20:47:49 INFO    resolving dependencies against the interna...\n06:08:22 DEBUG   hash verified for the pinned wheel\n20:59:18 INFO    no conflicting requirements found\n23:40:48 ERROR   resolving dependencies against the interna...\n09:33:29 INFO    smoke script streamed 4 MiB without a time...\n03:06:47 WARNING deprecation: the proxies argument is ignor...\n13:02:24 WARNING smoke script streamed 4 MiB without a time...\n10:55:21 DEBUG   hash verified for the pinned wheel\n12:36:58 INFO    deprecation: the proxies argument is ignor...\n04:15:44 INFO    resolving dependencies against the interna...\n13:28:37 ERROR   resolving dependencies against the interna...\n17:58:30 DEBUG   deprecation: the proxies argument is ignor...\n03:18:05 INFO    deprecation: the proxies argument is ignor...\n07:00:33 WARNING hash verified for the pinned wheel\n23:26:28 DEBUG   smoke script streamed 4 MiB without a time...\n13:30:31 ERROR   resolving dependencies against the interna...\n00:40:53 INFO    smoke script streamed 4 MiB without a time...\n20:04:22 DEBUG   hash verified for the pinned wheel\n04:37:39 INFO    resolving dependencies against the interna...\n00:34:30 DEBUG   deprecation: the proxies argument is ignor...\n05:37:08 INFO    deprecation: the proxies argument is ignor...\n00:29:12 INFO    deprecation: the proxies argument is ignor...\n02:12:25 ERROR   smoke script streamed 4 MiB without a time...\n22:37:58 INFO    smoke script streamed 4 MiB without a time...\n05:58:20 WARNING smoke script streamed 4 MiB without a time...\n13:56:00 INFO    hash verified for the pinned wheel\n15:33:20 INFO    hash verified for the pinned wheel\n05:03:53 ERROR   hash verified for the pinned wheel\n05:31:04 ERROR   hash verified for the pinned wheel\n02:11:30 WARNING deprecation: the proxies argument is ignor...\n09:06:55 DEBUG   resolving dependencies against the interna...\n16:42:39 INFO    no conflicting requirements found\n18:07:21 WARNING smoke script streamed 4 MiB without a time...\n22:08:12 WARNING hash verified for the pinned wheel\n18:29:05 ERROR   hash verified for the pinned wheel\n18:48:49 DEBUG   hash verified for the pinned wheel\n08:56:20 ERROR   resolving dependencies against the interna...\n06:28:29 INFO    deprecation: the proxies argument is ignor...\n13:15:34 WARNING smoke script streamed 4 MiB without a time...\n12:21:53 INFO    resolving dependencies against the interna...\n04:20:30 ERROR   no conflicting requirements found\n21:13:23 INFO    deprecation: the proxies argument is ignor...\n21:02:52 DEBUG   no conflicting requirements found\n23:40:39 WARNING deprecation: the proxies argument is ignor...\n04:19:34 INFO    deprecation: the proxies argument is ignor...\n15:39:10 INFO    hash verified for the pinned wheel\n12:41:28 DEBUG   smoke script streamed 4 MiB without a time...\n10:49:03 DEBUG   deprecation: the proxies argument is ignor...\n01:05:39 DEBUG   deprecation: the proxies argument is ignor...\n19:18:42 WARNING resolving dependencies against the interna...\n05:46:28 WARNING no conflicting requirements found\n07:25:53 WARNING hash verified for the pinned wheel\n18:08:21 WARNING smoke script streamed 4 MiB without a time...\n07:44:44 DEBUG   deprecation: the proxies argument is ignor...\n13:22:33 DEBUG   no conflicting requirements found\n10:05:59 DEBUG   no conflicting requirements found\n02:59:07 DEBUG   hash verified for the pinned wheel\n04:23:03 WARNING hash verified for the pinned wheel\n04:25:24 ERROR   no conflicting requirements found\n16:47:09 WARNING smoke script streamed 4 MiB without a time...\n00:25:13 INFO    hash verified for the pinned wheel\n11:02:24 INFO    no conflicting requirements found\n15:56:50 DEBUG   hash verified for the pinned wheel\n02:02:08 WARNING hash verified for the pinned wheel\n11:53:54 ERROR   hash verified for the pinned wheel\n08:35:58 INFO    deprecation: the proxies argument is ignor...\n19:27:45 DEBUG   smoke script streamed 4 MiB without a time...\n11:17:32 INFO    deprecation: the proxies argument is ignor...\n09:21:25 WARNING resolving dependencies against the interna...\n15:01:48 DEBUG   deprecation: the proxies argument is ignor...\n15:46:24 DEBUG   deprecation: the proxies argument is ignor...\n18:02:23 WARNING hash verified for the pinned wheel\n01:02:18 INFO    no conflicting requirements found\n16:39:24 INFO    no conflicting requirements found\n23:25:05 WARNING smoke script streamed 4 MiB without a time...\n11:40:04 INFO    resolving dependencies against the interna...\n20:48:15 INFO    deprecation: the proxies argument is ignor...\n03:36:13 ERROR   no conflicting requirements found\n08:51:34 WARNING resolving dependencies against the interna...\n05:58:26 DEBUG   hash verified for the pinned wheel\n08:11:23 WARNING no conflicting requirements found\n17:30:02 INFO    smoke script streamed 4 MiB without a time...\n10:43:28 WARNING resolving dependencies against the interna...\n22:33:39 INFO    smoke script streamed 4 MiB without a time...\n23:37:07 INFO    deprecation: the proxies argument is ignor...\n11:40:48 INFO    resolving dependencies against the interna...\n17:28:11 INFO    resolving dependencies against the interna...\nTraceback (most recent call last):\n  File \"src/clients/http.py\", line 258, in stream_response\n  File \"docs/adr/0004-http-client.md\", line 287, in AsyncTr...\n  File \"src/clients/http.py\", line 221, in build_client\n  File \"src/clients/http.py\", line 209, in stream_response\nAssertionError: The lock file pins transitive dependencies ...\n15:34:39 INFO    hash verified for the pinned wheel\n03:31:15 INFO    hash verified for the pinned wheel\n10:08:59 INFO    resolving dependencies against the interna...\n11:58:48 ERROR   smoke script streamed 4 MiB without a time...\n11:24:20 ERROR   smoke script streamed 4 MiB without a time...\n12:49:26 WARNING smoke script streamed 4 MiB without a time...\n05:14:54 ERROR   hash verified for the pinned wheel\n03:42:39 WARNING smoke script streamed 4 MiB without a time...\n22:14:06 WARNING resolving dependencies against the interna...\n21:46:56 ERROR   smoke script streamed 4 MiB without a time...\n22:45:39 ERROR   resolving dependencies against the interna...\n14:32:27 DEBUG   resolving dependencies against the interna...\n15:10:51 WARNING smoke script streamed 4 MiB without a time...\n05:54:56 INFO    deprecation: the proxies argument is ignor...\n08:52:31 DEBUG   deprecation: the proxies argument is ignor...\n19:49:44 ERROR   no conflicting requirements found\n06:10:18 INFO    smoke script streamed 4 MiB without a time...\n06:24:27 ERROR   smoke script streamed 4 MiB without a time...\n03:23:04 DEBUG   resolving dependencies against the interna...\n02:25:45 INFO    hash verified for the pinned wheel\n01:51:37 WARNING resolving dependencies against the interna...\n20:03:23 WARNING no conflicting requirements found\n17:06:29 ERROR   resolving dependencies against the interna...\n06:16:39 ERROR   no conflicting requirements found\n23:15:11 DEBUG   hash verified for the pinned wheel\n19:04:34 INFO    smoke script streamed 4 MiB without a time...\n21:19:59 ERROR   no conflicting requirements found\n21:46:39 WARNING smoke script streamed 4 MiB without a time...\n11:51:03 ERROR   deprecation: the proxies argument is ignor...\n18:23:44 INFO    hash verified for the pinned wheel\n03:08:18 INFO    resolving dependencies against the interna...\n14:35:16 ERROR   hash verified for the pinned wheel\n08:39:13 WARNING smoke script streamed 4 MiB without a time...\n08:37:47 ERROR   hash verified for the pinned wheel\n05:35:04 ERROR   deprecation: the proxies argument is ignor...\n04:56:51 WARNING hash verified for the pinned wheel\n04:07:14 DEBUG   resolving dependencies against the interna...\n01:11:21 WARNING smoke script streamed 4 MiB without a time...\n10:39:48 DEBUG   no conflicting requirements found\n06:50:58 WARNING hash verified for the pinned wheel\n14:50:07 WARNING resolving dependencies against the interna...\n03:06:12 ERROR   hash verified for the pinned wheel\n13:15:48 ERROR   resolving dependencies against the interna...\n16:54:01 WARNING smoke script streamed 4 MiB without a time...\n15:45:52 WARNING deprecation: the proxies argument is ignor...\n05:15:36 INFO    deprecation: the proxies argument is ignor...\n02:18:28 ERROR   no conflicting requirements found\n15:00:03 WARNING resolving dependencies against the interna...\n06:02:58 DEBUG   no conflicting requirements found\n15:16:11 DEBUG   no conflicting requirements found\n20:10:50 ERROR   deprecation: the proxies argument is ignor...\n00:08:52 INFO    no conflicting requirements found\n11:11:11 DEBUG   deprecation: the proxies argument is ignor...\n02:29:42 ERROR   no conflicting requirements found\n09:25:10 ERROR   deprecation: the proxies argument is ignor...\n07:50:29 ERROR   hash verified for the pinned wheel\n23:46:27 INFO    smoke script streamed 4 MiB without a time...\n03:33:43 DEBUG   deprecation: the proxies argument is ignor...\n23:35:38 WARNING smoke script streamed 4 MiB without a time...\n08:21:45 INFO    resolving dependencies against the interna...\n03:09:52 INFO    no conflicting requirements found\n08:47:17 WARNING hash verified for the pinned wheel\n03:53:36 INFO    no conflicting requirements found\n13:23:15 DEBUG   smoke script streamed 4 MiB without a time...\n09:39:19 INFO    smoke script streamed 4 MiB without a time...\n15:15:43 INFO    resolving dependencies against the interna...\n16:47:38 DEBUG   deprecation: the proxies argument is ignor...\n02:12:56 WARNING resolving dependencies against the interna...\n16:12:02 INFO    resolving dependencies against the interna...\n13:49:51 INFO    smoke script streamed 4 MiB without a time...\n19:31:03 ERROR   hash verified for the pinned wheel\n05:30:57 INFO    deprecation: the proxies argument is ignor...\n00:33:02 ERROR   resolving dependencies against the interna...\n14:30:15 INFO    no conflicting requirements found\n03:29:58 INFO    deprecation: the proxies argument is ignor...\n09:00:02 DEBUG   deprecation: the proxies argument is ignor...\n11:13:31 WARNING no conflicting requirements found\n05:48:34 WARNING smoke script streamed 4 MiB without a time...\n09:46:24 DEBUG   smoke script streamed 4 MiB without a time...\n12:53:25 DEBUG   resolving dependencies against the interna...\n19:32:45 INFO    resolving dependencies against the interna...\n22:59:31 ERROR   hash verified for the pinned wheel\n04:52:24 DEBUG   smoke script streamed 4 MiB without a time...\n20:13:43 WARNING no conflicting requirements found",
+      "tool_call_id": "case-05-dependency-upgrade-tc010",
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m047",
+      "metadata": {},
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "No conflict, but two transitive pins are unused and can be dropped later.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m048",
+      "metadata": {
+        "filler": "assistant_note"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "The lock file pins transitive dependencies that the project never imports. I re-read requirements.lock around `AsyncTransport` before settling on that.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m049",
+      "metadata": {
+        "filler": "duplicate",
+        "note": "near-duplicate of an earlier turn"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "The changelog mentions the removal three releases before it landed. I re-read scripts/smoke.py around `AsyncTransport` before settling on that.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m050",
+      "metadata": {
+        "filler": "small_tool_run"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Let me check src/clients/retries.py with `grep -rn proxies src`.",
+      "tool_call_id": null,
+      "tool_calls": [
+        {
+          "arguments": "{\"command\": \"grep -rn proxies src\"}",
+          "id": "case-05-dependency-upgrade-tc011",
+          "name": "execute"
+        }
+      ]
+    },
+    {
+      "id": "case-05-dependency-upgrade-m051",
+      "metadata": {
+        "filler": "small_tool_run"
+      },
+      "name": "execute",
+      "pinned": false,
+      "role": "tool",
+      "text": "--- pip install -r requirements.lock --dry-run ---\nread_file: 44 lines, utf-8, no trailing newline stripped\nline numbers are 1-based, as in the editor\n 1|         yield from response.iter_bytes()\n 2|     client = httpx.Client(proxy=proxy_argument(), timeout=Timeo...\n 3|     transport = AsyncTransport(retries=2)\n 4|     with client.stream('GET', url) as response:\n 5|         yield from response.iter_bytes()\n 6| requires-python = '>=3.11'\n 7|     with client.stream('GET', url) as response:\n 8| requires-python = '>=3.11'\n 9| requires-python = '>=3.11'\n10| requires-python = '>=3.11'\n11|     transport = AsyncTransport(retries=2)\n12|         yield from response.iter_bytes()\n13| requires-python = '>=3.11'\n14|     client = httpx.Client(proxy=proxy_argument(), timeout=Timeo...\n15|     transport = AsyncTransport(retries=2)\n16|     transport = AsyncTransport(retries=2)\n17|     transport = AsyncTransport(retries=2)\n18|         yield from response.iter_bytes()\n19|     with client.stream('GET', url) as response:\n20|     client = httpx.Client(proxy=proxy_argument(), timeout=Timeo...\n21| requires-python = '>=3.11'\n22|     transport = AsyncTransport(retries=2)\n23| requires-python = '>=3.11'\n24| requires-python = '>=3.11'\n25|     with client.stream('GET', url) as response:\n26|     transport = AsyncTransport(retries=2)\n27|     client = httpx.Client(proxy=proxy_argument(), timeout=Timeo...\n28|     with client.stream('GET', url) as response:\n29|         yield from response.iter_bytes()\n30|         yield from response.iter_bytes()\n31|     client = httpx.Client(proxy=proxy_argument(), timeout=Timeo...\n32| requires-python = '>=3.11'\n33|         yield from response.iter_bytes()\n34|     with client.stream('GET', url) as response:\n35|     client = httpx.Client(proxy=proxy_argument(), timeout=Timeo...\n36|     client = httpx.Client(proxy=proxy_argument(), timeout=Timeo...\n37| requires-python = '>=3.11'\n38| requires-python = '>=3.11'\n39| requires-python = '>=3.11'\n40|     client = httpx.Client(proxy=proxy_argument(), timeout=Timeo...\n41|         yield from response.iter_bytes()",
+      "tool_call_id": "case-05-dependency-upgrade-tc011",
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m052",
+      "metadata": {
+        "filler": "duplicate",
+        "note": "near-duplicate of an earlier turn"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Let me check src/clients/retries.py with `grep -rn proxies src`.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m053",
+      "metadata": {
+        "filler": "duplicate",
+        "note": "near-duplicate of an earlier turn"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Running `make smoke` now and reporting back; no other file changes in flight.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m054",
+      "metadata": {},
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Only one call site passes the removed argument, in src/clients/http.py; the adapter in src/clients/retries.py is already on the new signature.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m055",
+      "metadata": {
+        "filler": "boilerplate"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Running `pip check` now and reporting back; no other file changes in flight.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m056",
+      "metadata": {
+        "todo_items": 4,
+        "todo_step": 2
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Board update before the gate.",
+      "tool_call_id": null,
+      "tool_calls": [
+        {
+          "arguments": "{\"todos\": [{\"content\": \"Read the changelog between the pin and the target\", \"id\": \"case-05-dependency-upgrade-todo00\", \"order\": 0, \"priority\": \"high\", \"status\": \"completed\"}, {\"content\": \"Confirm the lock file pin and its hash\", \"id\": \"case-05-dependency-upgrade-todo01\", \"order\": 1, \"priority\": \"medium\", \"status\": \"completed\"}, {\"content\": \"Fix the removed argument at its single call site\", \"id\": \"case-05-dependency-upgrade-todo02\", \"order\": 2, \"priority\": \"medium\", \"status\": \"completed\"}, {\"content\": \"Run the offline gate\", \"id\": \"case-05-dependency-upgrade-todo03\", \"order\": 3, \"priority\": \"medium\", \"status\": \"in_progress\"}]}",
+          "id": "case-05-dependency-upgrade-tc012",
+          "name": "write_todos"
+        }
+      ]
+    },
+    {
+      "id": "case-05-dependency-upgrade-m057",
+      "metadata": {
+        "todo_step": 2
+      },
+      "name": "write_todos",
+      "pinned": false,
+      "role": "tool",
+      "text": "Todos updated: 4 items, 3 completed, 1 open.",
+      "tool_call_id": "case-05-dependency-upgrade-tc012",
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m058",
+      "metadata": {
+        "filler": "small_tool_run"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Let me check src/config/endpoints.py with `pip install -r requirements.lock --dry-run`.",
+      "tool_call_id": null,
+      "tool_calls": [
+        {
+          "arguments": "{\"path\": \".\", \"pattern\": \"AsyncTransport\"}",
+          "id": "case-05-dependency-upgrade-tc013",
+          "name": "grep"
+        }
+      ]
+    },
+    {
+      "id": "case-05-dependency-upgrade-m059",
+      "metadata": {
+        "filler": "small_tool_run"
+      },
+      "name": "grep",
+      "pinned": false,
+      "role": "tool",
+      "text": "$ grep -rn --color=never pytest -q tests/test_http_client.py .\n42 matches\nrequirements.lock:188: yield from response.iter_bytes()\nsrc/clients/retries.py:137: transport = AsyncTransport(retries=...\npyproject.toml:562: transport = AsyncTransport(retries=2)\nrequirements.lock:802: yield from response.iter_bytes()\nsrc/clients/retries.py:141: requires-python = '>=3.11'\nsrc/clients/retries.py:759: with client.stream('GET', url) as r...\nsrc/clients/retries.py:881: transport = AsyncTransport(retries=...\nCHANGELOG.md:433: requires-python = '>=3.11'\nsrc/config/endpoints.py:486: requires-python = '>=3.11'\nCHANGELOG.md:802: requires-python = '>=3.11'\nrequirements.lock:464: yield from response.iter_bytes()\nsrc/clients/http.py:374: transport = AsyncTransport(retries=2)\nCHANGELOG.md:411: with client.stream('GET', url) as response:\nCHANGELOG.md:309: client = httpx.Client(proxy=proxy_argument(),...\ndocs/adr/0004-http-client.md:648: with client.stream('GET', url...\nrequirements.lock:168: transport = AsyncTransport(retries=2)\nsrc/clients/http.py:358: requires-python = '>=3.11'\ndocs/adr/0004-http-client.md:161: yield from response.iter_byte...\nsrc/clients/retries.py:445: client = httpx.Client(proxy=proxy_a...\nsrc/clients/retries.py:751: transport = AsyncTransport(retries=...\nsrc/clients/retries.py:583: yield from response.iter_bytes()\nCHANGELOG.md:354: with client.stream('GET', url) as response:\nrequirements.lock:107: yield from response.iter_bytes()\nrequirements.lock:93: with client.stream('GET', url) as respons...\npyproject.toml:728: yield from response.iter_bytes()\npyproject.toml:723: yield from response.iter_bytes()\nscripts/smoke.py:727: transport = AsyncTransport(retries=2)\nrequirements.lock:145: requires-python = '>=3.11'\nsrc/config/endpoints.py:719: client = httpx.Client(proxy=proxy_...\nscripts/smoke.py:878: with client.stream('GET', url) as respons...\nCHANGELOG.md:163: with client.stream('GET', url) as response:\ndocs/adr/0004-http-client.md:115: requires-python = '>=3.11'\nrequirements.lock:207: yield from response.iter_bytes()\nCHANGELOG.md:433: with client.stream('GET', url) as response:\nsrc/clients/retries.py:572: with client.stream('GET', url) as r...\nsrc/clients/http.py:125: yield from response.iter_bytes()\nscripts/smoke.py:247: requires-python = '>=3.11'\ntests/test_http_client.py:675: requires-python = '>=3.11'\ntests/test_http_client.py:735: with client.stream('GET', url) a...\nscripts/smoke.py:44: requires-python = '>=3.11'\npyproject.toml:503: client = httpx.Client(proxy=proxy_argument(...\nsrc/config/endpoints.py:841: yield from response.iter_bytes()",
+      "tool_call_id": "case-05-dependency-upgrade-tc013",
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m060",
+      "metadata": {
+        "filler": "small_tool_run"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Let me check scripts/smoke.py with `make smoke`.",
+      "tool_call_id": null,
+      "tool_calls": [
+        {
+          "arguments": "{\"path\": \"scripts/smoke.py\"}",
+          "id": "case-05-dependency-upgrade-tc014",
+          "name": "read_file"
+        }
+      ]
+    },
+    {
+      "id": "case-05-dependency-upgrade-m061",
+      "metadata": {
+        "filler": "small_tool_run"
+      },
+      "name": "read_file",
+      "pinned": false,
+      "role": "tool",
+      "text": "$ make smoke\ncaptured 8 lines, exit status follows\n03:19:40 DEBUG   resolving dependencies against the internal in...\n10:08:52 INFO    resolving dependencies against the internal in...\n20:59:40 DEBUG   deprecation: the proxies argument is ignored\n01:20:56 INFO    resolving dependencies against the internal in...\nTraceback (most recent call last):\n  File \"src/clients/retries.py\", line 287, in proxy_argument\n  File \"CHANGELOG.md\", line 329, in proxy_argument\n  File \"tests/test_http_client.py\", line 347, in TimeoutPolicy\n  File \"requirements.lock\", line 48, in HttpClient\nAssertionError: Two adapters wrap the client, and only one of t...",
+      "tool_call_id": "case-05-dependency-upgrade-tc014",
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m062",
+      "metadata": {
+        "states_fact": "python-floor"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "user",
+      "text": "One constraint for the pull request, non-negotiable: the project declares requires-python >=3.11 and we are not lowering it for this upgrade.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m063",
+      "metadata": {
+        "filler": "assistant_note"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "The smoke script is the only thing that exercises the streaming path. I re-read pyproject.toml around `stream_response` before settling on that.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m064",
+      "metadata": {
+        "filler": "user_note"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "user",
+      "text": "Can we bump two majors in one pull request, or does that break the review?",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m065",
+      "metadata": {},
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Understood: the httpx bump ships alone, and the framework upgrade becomes a second, stacked pull request on top of this one.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m066",
+      "metadata": {
+        "filler": "user_note"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "user",
+      "text": "Is the streaming path covered by anything other than the smoke script?",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m067",
+      "metadata": {
+        "states_fact": "one-major-rule"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "user",
+      "text": "And repeat the rule about majors so it lands in the description: never bump two majors in one pull request. Reviewers bounce them.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m068",
+      "metadata": {
+        "states_fact": "verify-command"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Last thing before I open it: the gate before opening the pull request is make smoke, which is the only offline check that exercises the streaming path.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m069",
+      "metadata": {
+        "filler": "boilerplate"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Running `pip install -r requirements.lock --dry-run` now and reporting back; no other file changes in flight.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m070",
+      "metadata": {
+        "filler": "duplicate",
+        "note": "near-duplicate of an earlier turn"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Running `pip install -r requirements.lock --dry-run` now and reporting back; no other file changes in flight.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-05-dependency-upgrade-m071",
+      "metadata": {
+        "note": "user restates a constraint near the end",
+        "role_in_case": "contract"
+      },
+      "name": null,
+      "pinned": true,
+      "role": "user",
+      "text": "Keep the pull request reviewable: one major, one call site changed, and the offline gate green before you ask anyone to look at it.",
+      "tool_call_id": null,
+      "tool_calls": []
+    }
+  ],
+  "metadata": {
+    "case_seed": 20261036,
+    "char_count": 137772,
+    "domain": "dependency-upgrade",
+    "fact_positions": {
+      "early": 2,
+      "late": 3,
+      "middle": 2
+    },
+    "facts_inside_tool_output": [
+      "breaking-change",
+      "lock-pin-line"
+    ],
+    "generator": "evals/generate_dataset.py",
+    "generator_version": 1,
+    "largest_tool_output_chars": 65282,
+    "largest_tool_output_lines": 1801,
+    "largest_tool_output_message": "case-05-dependency-upgrade-m020",
+    "message_count": 72,
+    "near_duplicate_messages": 9,
+    "notes": "Stresses two facts that exist only inside large tool outputs - a changelog entry and a pinned hash line - plus a late constraint restated twice by the user.",
+    "pinned_messages": 2,
+    "proxy_tokens": 34474,
+    "repeated_tool_calls": 6,
+    "seed": 20261031,
+    "todo_steps": 3,
+    "tool_results": 14,
+    "traps": 1
+  },
+  "probes": [
+    {
+      "aliases": [
+        "0.28.1"
+      ],
+      "expected": "httpx==0.28.1",
+      "fact_id": "case-05-dependency-upgrade-f00",
+      "id": "case-05-dependency-upgrade-p00",
+      "question": "Which exact httpx version does the lock file pin?"
+    },
+    {
+      "aliases": [
+        "proxies",
+        "the proxies argument was removed"
+      ],
+      "expected": "the proxies argument was removed in favour of proxy",
+      "fact_id": "case-05-dependency-upgrade-f02",
+      "id": "case-05-dependency-upgrade-p01",
+      "question": "Which breaking change does the new httpx major introduce?"
+    },
+    {
+      "aliases": [
+        "httpx==0.28.1 --hash=sha256"
+      ],
+      "expected": "httpx==0.28.1 --hash=sha256:9f2c41ab7e0d5b3c8f6a1e4d70c9b2a5",
+      "fact_id": "case-05-dependency-upgrade-f03",
+      "id": "case-05-dependency-upgrade-p02",
+      "question": "What is the pinned httpx line, with its hash, in the lock file?"
+    },
+    {
+      "aliases": [
+        "one major per pull request",
+        "two majors in one pull request"
+      ],
+      "expected": "never bump two majors in one pull request",
+      "fact_id": "case-05-dependency-upgrade-f05",
+      "id": "case-05-dependency-upgrade-p03",
+      "question": "Which rule bounds a single upgrade pull request?"
+    }
+  ],
+  "source": "synthetic",
+  "task": "Plan the HTTP client upgrade, read the lock file and the changelog, and prepare the smallest reviewable pull request."
+}

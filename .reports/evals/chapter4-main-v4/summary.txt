@@ -1,0 +1,49 @@
+experiment chapter4-main-v4 · dataset long_histories · model qwen3.8-max
+window 8,000 tokens · repetitions 3 · trials 165 · total $7.5541
+
+arm                                      retention     pass^k  prompt tok   aux tok   cache   $/trial   $/fact  overflow  errors
+--------------------------------------------------------------------------------------------------------------------------------
+baseline_full_history                    0.98 ± 0.06     0.80      54,459         0   68.5%    0.0580   0.0134      100%      0%
+baseline_capped                          0.00 ± 0.00     0.00           0         0    0.0%    0.0000        -      100%    100%
+sliding_window                           0.35 ± 0.22     0.00       5,816         0   80.1%    0.0417   0.0272        0%      0%
+message_selection                        0.75 ± 0.24     0.20       8,688         0   81.7%    0.0245   0.0074        0%      0%
+message_selection_decision               0.75 ± 0.22     0.00       9,038    36,009   16.6%    0.0772   0.0232        0%      0%
+message_selection_decision_plus_truncation 0.74 ± 0.10     0.00       8,969    36,009   18.8%    0.0701   0.0215        0%      0%
+anchored_compaction                      0.59 ± 0.27     0.00       7,187     6,172   32.2%    0.0368   0.0138       40%      0%
+tool_truncation_only                     0.75 ± 0.12     0.00      49,480         0   73.5%    0.0752   0.0226      100%      0%
+sliding_window_plus_truncation           0.40 ± 0.25     0.00       5,816         0   66.0%    0.0544   0.0302        0%      0%
+message_selection_plus_truncation        0.79 ± 0.11     0.00       8,688         0   75.4%    0.0272   0.0078        0%      0%
+anchored_compaction_plus_truncation      0.64 ± 0.20     0.00       7,208     6,172   37.5%    0.0383   0.0134       40%      0%
+
+retention by fact position (mean over repetitions)
+arm                                        early  middle    late
+----------------------------------------------------------------
+baseline_full_history                   1.00    0.97    1.00
+baseline_capped                         0.00    0.00    0.00
+sliding_window                          0.00    0.37    0.57
+message_selection                       0.93    0.57    0.90
+message_selection_decision              0.93    0.53    0.95
+message_selection_decision_plus_truncation    1.00    0.47    0.95
+anchored_compaction                     0.73    0.40    0.81
+tool_truncation_only                    1.00    0.50    0.95
+sliding_window_plus_truncation          0.00    0.37    0.76
+message_selection_plus_truncation       1.00    0.57    0.95
+anchored_compaction_plus_truncation     0.80    0.40    0.90
+
+per-case retention (repetitions of the same case)
+arm                                      -service-debug ntend-refactor ation-incident -flaky-ci-test ndency-upgrade
+-------------------------------------------------------------------------------------------------------------------
+baseline_full_history                              1.00           1.00           1.00           0.92           1.00
+baseline_capped                                    0.00           0.00           0.00           0.00           0.00
+sliding_window                                     0.20           0.40           0.50           0.42           0.25
+message_selection                                  0.80           0.80           1.00           0.50           0.67
+message_selection_decision                         0.80           0.80           0.92           0.50           0.75
+message_selection_decision_plus_truncation           0.80           0.80           0.75           0.67           0.67
+anchored_compaction                                0.80           0.80           0.75           0.25           0.33
+tool_truncation_only                               0.80           0.80           0.83           0.67           0.67
+sliding_window_plus_truncation                     0.60           0.40           0.33           0.33           0.33
+message_selection_plus_truncation                  0.80           0.80           0.92           0.75           0.67
+anchored_compaction_plus_truncation                0.80           0.80           0.75           0.50           0.33
+
+trials with an error: 15
+   15 · context overflow

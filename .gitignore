@@ -35,3 +35,11 @@ Thumbs.db
 # Worktrees locais do Claude Code
 .claude/worktrees/
 .claude/scheduled_tasks.lock
+# Artefatos do driver de TUI (screenshots SVG grandes, regeneráveis)
+.reports/tui/
+.reports/dataset/
+
+# Geração sintética (datagen/): venv isolado e artefatos brutos do Data Designer.
+# O dataset FINAL é congelado em evals/datasets/<nome>/ e é versionado.
+datagen/output/
+datagen/artifacts/

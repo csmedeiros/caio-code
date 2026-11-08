@@ -58,18 +58,73 @@ def main() -> int:
     except Exception as exc:  # smoke must report, not crash
         check("import caio_code", False, repr(exc))
 
-    cli = ROOT / "src" / "caio_code" / "cli.py"
-    if cli.is_file():
-        result = subprocess.run(
-            [sys.executable, "-m", "caio_code", "--help"],
-            cwd=ROOT,
-            capture_output=True,
-            text=True,
-            check=False,
+    result = subprocess.run(
+        [sys.executable, "-m", "caio_code", "--help"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    check("agent cli --help", result.returncode == 0, result.stderr[-300:])
+
+    # As políticas são o objeto de medição: se uma não planeja, nada mais importa.
+    try:
+        from caio_code.domain.conversation.budget import TokenBudget
+        from caio_code.domain.conversation.messages import Message, Role, Transcript
+        from caio_code.domain.policy import (
+            FullHistoryPolicy,
+            MessageSelectionPolicy,
+            PolicyPipeline,
+            PolicyRequest,
+            SlidingWindowPolicy,
+            StructureRepairPolicy,
+            ToolOutputTruncationPolicy,
         )
-        check("agent cli --help", result.returncode == 0, result.stderr[-300:])
-    else:
-        print("skip agent cli --help (cli.py not written yet)")
+        from caio_code.domain.policy.compaction import CompactionPlanner
+        from caio_code.infrastructure.tokens import CharProxyTokenCounter
+
+        counter = CharProxyTokenCounter()
+        transcript = Transcript.of(
+            Message(id=f"m{i}", role=Role.USER if i % 2 == 0 else Role.ASSISTANT, text="x" * 800)
+            for i in range(12)
+        )
+        budget = TokenBudget(600)
+        request = PolicyRequest(transcript=transcript, budget=budget, counter=counter)
+        for policy in (
+            FullHistoryPolicy(),
+            SlidingWindowPolicy(),
+            MessageSelectionPolicy(),
+            CompactionPlanner(keep_tokens=400),
+            ToolOutputTruncationPolicy(),
+        ):
+            decision = policy.plan(request)
+            check(f"policy {policy.name} plans", decision.tokens_before > 0)
+            check(
+                f"policy {policy.name} reports its own cost",
+                decision.tokens_after == counter.count_transcript(decision.result(transcript))
+                + request.fixed_tokens
+                or policy.name == "anchored_compaction",
+                f"tokens_after={decision.tokens_after}",
+            )
+        pipeline = PolicyPipeline(
+            "smoke",
+            [ToolOutputTruncationPolicy(), SlidingWindowPolicy(), StructureRepairPolicy()],
+        )
+        composed = pipeline.plan(request)
+        check("pipeline composes", composed.policies[-1] == "structure_repair")
+        check("pipeline fits the budget", not composed.overflowed, str(composed.as_record()))
+    except Exception as exc:  # smoke must report, not crash
+        check("context policies", False, repr(exc))
+
+    # O dataset congelado do Capítulo 4 precisa carregar sem rede.
+    try:
+        from caio_code.infrastructure.datasets.loader import describe, load_dataset
+
+        dataset = load_dataset(ROOT / "evals" / "datasets" / "long_histories")
+        stats = describe(dataset)
+        check("eval dataset loads", len(dataset.cases) == len(stats.cases) > 0)
+    except Exception as exc:  # smoke must report, not crash
+        check("eval dataset loads", False, repr(exc))
 
     if FAILURES:
         print(f"\n{len(FAILURES)} failure(s): {', '.join(FAILURES)}")

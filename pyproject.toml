@@ -4,23 +4,37 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "caio-code"
-version = "0.1.0"
+version = "0.2.0"
 description = "Coding agent for long-horizon tasks in large repositories (TCC prototype)"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Proprietary" }
 authors = [{ name = "Caio de Souza de Medeiros" }]
-dependencies = []
+dependencies = [
+  "deepagents>=0.7.32",
+  "langchain>=1.4",
+  "langchain-core>=1.7",
+  "langchain-openai>=1.7",
+  "langchain-typesafe[experimental]>=0.0.1a3",
+  "langgraph>=1.2",
+  "langsmith>=0.14",
+  "python-dotenv>=1.2",
+  "rich>=15",
+  "textual>=8.2",
+]
 
 [project.optional-dependencies]
 dev = [
   "pytest>=8.0",
+  "pytest-asyncio>=0.24",
   "pytest-cov>=5.0",
   "ruff>=0.6",
 ]
+# Contagem real de tokens (baixa o encoding na primeira vez: não é usada no CI).
+tokens = ["tiktoken>=0.7"]
 
 [project.scripts]
-caio-code = "caio_code.cli:main"
+caio-code = "caio_code.presentation.cli.main:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -28,15 +42,17 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q --strict-markers"
+asyncio_mode = "auto"
 markers = [
   "integration: requires a real model provider or network access (skipped in CI)",
+  "tui: drives the Textual app headlessly through the pilot",
 ]
 filterwarnings = ["error"]
 
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-src = ["src", "tests", "scripts"]
+src = ["src", "tests", "scripts", "evals"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]

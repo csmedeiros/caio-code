@@ -23,6 +23,7 @@ Automação do repositório: CI, hooks, Linear e smoke test. Nada aqui é import
 | `install_hooks.py` | aponta `core.hooksPath` para `.githooks/` |
 | `linear.py` | cliente GraphQL mínimo (whoami, issues, create, comment, state) |
 | `smoke.py` | verificação offline multiplataforma |
+| `summarize_experiment.py` | lê `.reports/evals/<run_id>/results.json` e imprime as tabelas do Capítulo 4 (retenção com desvio, pass^k, tokens de prompt vs auxiliares, custo por fato retido); nunca chama modelo nem escreve |
 
 ## O que não entra aqui
 

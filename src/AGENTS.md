@@ -1,14 +1,19 @@
 # src/
 
 Código do agente. Tudo que é importável pelo pacote `caio_code` vive aqui; nada que seja
-ferramenta de desenvolvimento (`scripts/`), teste (`tests/`) ou documentação (`docs/`).
+ferramenta de desenvolvimento (`scripts/`), teste (`tests/`), dados de avaliação (`evals/`)
+ou documentação (`docs/`).
 
 ## Invariantes
 
-- Um pacote por camada: `harness`, `context`, `providers`, `tools`, `state`.
-- A direção dos imports é verificada por `tests/test_layering.py`: `cli → harness → folhas`.
-- As folhas não importam `harness` nem `cli`, e não importam umas às outras.
+- Um pacote por camada: `domain`, `application`, `infrastructure`, `presentation` (ADR 0003).
+- Regra de dependência: `presentation → application → domain ← infrastructure`.
+  `domain` não importa nada do pacote (exceção única: `caio_code.config`).
+- A verificação automática (`tests/test_layering.py`) ainda não existe; enquanto isso a regra
+  vale por revisão — pendência registrada no ADR 0003.
 - Nenhum código executável no `__init__.py` de pacote: só reexportações explícitas.
+- Nenhuma dependência de framework (LangChain, deepagents, openai, textual) fora de
+  `infrastructure/`, `application/agent/` e `presentation/`; o `domain` é puro.
 
 ## Regras
 

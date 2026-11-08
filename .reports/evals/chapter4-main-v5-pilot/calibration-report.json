@@ -1,0 +1,17 @@
+{
+  "total": 30,
+  "agreements": 29,
+  "agreement_ratio": 0.9667,
+  "disagreements": [
+    {
+      "probe_id": "case-01-api-service-debug-p06",
+      "human": true,
+      "judge": false,
+      "reason": "The agent disavowed the gold path as unverified and gave different paths instead.",
+      "question": "What is the full path of the file that recorded the load-test HTTP 500 tracebacks?",
+      "gold": "/var/log/payments-service/fastapi-load-500.log",
+      "reply": "**Constraint restated (carried forward):** Find why the payments service intermittently returns HTTP 500 under load and propose the minimal fix; report the exact values relied on, not paraphrases.\n\nAnswers, strictly from session content:\n\n- **case-01-api-service-debug-p00** — Do not know. No p99 lock-acquisition measurement appears. The only lock timings are commit `9f2a6c0d`: \"Distributed lock ac"
+    }
+  ],
+  "label_source": "assistant (two independent blind subagents, unanimous); NOT the author — disclosed as a threat to validity"
+}

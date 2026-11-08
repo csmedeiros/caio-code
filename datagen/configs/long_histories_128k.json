@@ -1,0 +1,253 @@
+{
+  "dataset_name": "long_histories_128k",
+  "generator": "nemo-data-designer",
+  "source": "synthetic-datadesigner",
+  "seed": 20261107,
+  "description": "Five long synthetic software-engineering histories of roughly 128k proxy tokens each, generated with NeMo Data Designer and assembled deterministically by datagen/scripts/convert.py.",
+
+  "window_tokens": 32000,
+  "chars_per_token": 4,
+  "target_proxy_tokens_per_case": 128000,
+
+  "models": {
+    "blocks": "qwen-flash",
+    "facts": "qwen-flash"
+  },
+
+  "run_timeout_seconds": 3600,
+
+  "calibration": {
+    "_comment": "Médias MEDIDAS no piloto de case-01 (2026-11-07, scale 0.05). As contagens de blocos abaixo foram derivadas destas médias para que cada caso atinja o seu char_target com ~15% de sobra; convert.py consome em ordem e para no alvo.",
+    "measured_mean_chars": {
+      "user_turn": 387,
+      "assistant_turn": 857,
+      "tool_output": 5377
+    },
+    "char_mix": { "tool_output": 0.78, "assistant_turn": 0.15, "user_turn": 0.07 },
+    "surplus_factor": 1.15
+  },
+
+  "cost_model": {
+    "_comment": "Estimativas usadas só pelo --dry-run. Os números reais de tokens vêm do metadata.json do Data Designer.",
+    "prompt_tokens_per_call": 190,
+    "output_chars": {
+      "user_turn": 387,
+      "assistant_turn": 857,
+      "tool_output": 5377,
+      "facts": 300
+    }
+  },
+
+  "bounds": {
+    "_comment": "A invariante que importa é a pressão de tokens (char_target/4 vs janela), não a contagem de mensagens: um caso com blocos menores tem mais mensagens para o mesmo char_target. A faixa é só um sanidade de 'sessão longa multi-turno', medida em 96-221 nos cinco casos convertidos (o dataset antigo usava 72-128).",
+    "min_messages": 80,
+    "max_messages": 260,
+    "min_chars": 430000,
+    "max_chars": 640000,
+    "min_size_spread_chars": 60000,
+    "facts_per_position": 4,
+    "min_tool_outputs_over_line_ceiling": 1,
+    "min_tool_outputs_over_any_ceiling": 2
+  },
+
+  "assembly": {
+    "first_message_pinned": true,
+    "tool_call_probability": 0.55,
+    "tool_output_line_ceiling": 2000,
+    "tool_output_byte_ceiling": 51200,
+    "fact_position_fractions": {
+      "early": [0.08, 0.12, 0.16, 0.2],
+      "middle": [0.44, 0.48, 0.52, 0.56],
+      "late": [0.84, 0.88, 0.92, 0.96]
+    }
+  },
+
+  "cases": [
+    {
+      "id": "case-01-api-service-debug",
+      "domain": "debugging a Python FastAPI payments service that intermittently returns HTTP 500 under load",
+      "description": "Long debugging session over a FastAPI payments service: tracebacks, dependency injection wiring, database connection pooling and a race in the retry path.",
+      "task": "Find why the payments service intermittently returns HTTP 500 under load and propose the minimal fix.",
+      "char_target": 512000,
+      "blocks": { "user_turn": 107, "assistant_turn": 104, "tool_output": 86 },
+      "facts": 30
+    },
+    {
+      "id": "case-02-frontend-refactor",
+      "domain": "refactoring a large React and TypeScript dashboard frontend from class components to hooks while preserving behaviour",
+      "description": "Incremental refactor of a React/TypeScript dashboard: component extraction, hook migration, prop drilling removal, and the render-performance regressions that follow.",
+      "task": "Migrate the dashboard's legacy class components to hooks without changing observable behaviour.",
+      "char_target": 470000,
+      "blocks": { "user_turn": 98, "assistant_turn": 95, "tool_output": 79 },
+      "facts": 30
+    },
+    {
+      "id": "case-03-pipeline-migration-incident",
+      "domain": "migrating an Apache Airflow ETL pipeline to a new orchestration platform during an active data-quality incident",
+      "description": "Migration of an Airflow ETL pipeline while a data-quality incident is open: DAG backfills, schema drift, late-arriving partitions and a broken sensor.",
+      "task": "Complete the pipeline migration while keeping the nightly data-quality checks green.",
+      "char_target": 556000,
+      "blocks": { "user_turn": 116, "assistant_turn": 113, "tool_output": 93 },
+      "facts": 30
+    },
+    {
+      "id": "case-04-flaky-ci-test",
+      "domain": "investigating a flaky integration test in a continuous-integration pipeline that fails only on the shared runner",
+      "description": "Hunt for a flaky integration test: timing dependence, shared-runner port collisions, test ordering and a fixture that leaks state between cases.",
+      "task": "Make the flaky integration test deterministic without disabling it.",
+      "char_target": 448000,
+      "blocks": { "user_turn": 94, "assistant_turn": 91, "tool_output": 75 },
+      "facts": 30
+    },
+    {
+      "id": "case-05-dependency-upgrade",
+      "domain": "performing a major version upgrade of a core dependency across a monorepo with several independently released services",
+      "description": "Major-version dependency upgrade across a monorepo: breaking API changes, lockfile conflicts, deprecation warnings and the services that pin the old version.",
+      "task": "Upgrade the core dependency across the monorepo and keep every service building.",
+      "char_target": 590000,
+      "blocks": { "user_turn": 123, "assistant_turn": 120, "tool_output": 99 },
+      "facts": 30
+    }
+  ],
+
+  "column_sets": {
+    "user_turn": [
+      {
+        "name": "domain",
+        "column_type": "sampler",
+        "sampler_type": "category",
+        "params": { "values": ["__DOMAIN__"] }
+      },
+      {
+        "name": "beat",
+        "column_type": "sampler",
+        "sampler_type": "category",
+        "params": {
+          "values": [
+            "reports a new symptom",
+            "answers a clarifying question",
+            "pastes an error message",
+            "changes the scope of the request",
+            "asks for verification of a previous claim",
+            "pushes back on a proposed fix",
+            "provides missing environment detail"
+          ],
+          "weights": [3, 3, 3, 2, 2, 2, 2]
+        }
+      },
+      {
+        "name": "body",
+        "column_type": "llm-text",
+        "prompt": "You are the human developer in a long pair-programming session about: {{ domain }}.\n\nIn this turn you {{ beat }}.\n\nWrite ONLY your message to the coding agent, as plain chat text. Between 200 and 420 characters. Be concrete and specific: name real files, functions, versions, environment variables, stack frames or commands. Never write markdown headings, never explain that you are a user, never add a preamble or a sign-off."
+      }
+    ],
+
+    "assistant_turn": [
+      {
+        "name": "domain",
+        "column_type": "sampler",
+        "sampler_type": "category",
+        "params": { "values": ["__DOMAIN__"] }
+      },
+      {
+        "name": "beat",
+        "column_type": "sampler",
+        "sampler_type": "category",
+        "params": {
+          "values": [
+            "forms a hypothesis and states what would confirm it",
+            "explains what the last tool output implies",
+            "decides which file to inspect next and why",
+            "rules out a previously suspected cause",
+            "proposes a concrete minimal fix",
+            "notes a risk or side effect of the proposed fix",
+            "summarises progress and the remaining unknown"
+          ],
+          "weights": [3, 3, 3, 2, 2, 2, 2]
+        }
+      },
+      {
+        "name": "body",
+        "column_type": "llm-text",
+        "prompt": "You are an autonomous coding agent working on: {{ domain }}.\n\nIn this turn you {{ beat }}.\n\nWrite ONLY your reasoning-and-reply text, as it would appear in the transcript. Between 600 and 1300 characters. Reason like a careful engineer: refer to specific identifiers, line numbers, versions, flags or file paths. Do not invent a final resolution unless the beat asks for a fix. No markdown headings, no preamble, no sign-off."
+      }
+    ],
+
+    "tool_output": [
+      {
+        "name": "domain",
+        "column_type": "sampler",
+        "sampler_type": "category",
+        "params": { "values": ["__DOMAIN__"] }
+      },
+      {
+        "name": "tool_name",
+        "column_type": "sampler",
+        "sampler_type": "category",
+        "params": {
+          "values": [
+            "read_file",
+            "grep",
+            "list_dir",
+            "run_tests",
+            "shell",
+            "git_log",
+            "edit_file"
+          ],
+          "weights": [4, 3, 2, 3, 3, 2, 2]
+        }
+      },
+      {
+        "name": "body",
+        "column_type": "llm-text",
+        "prompt": "Produce the raw stdout of the `{{ tool_name }}` tool during a session about: {{ domain }}.\n\nWrite ONLY the tool output itself, exactly as a terminal or file would show it. Between 2500 and 5500 characters. It must look like genuine machine output for that tool:\n- read_file: source code with plausible line structure\n- grep: many matching lines with file:line: prefixes\n- list_dir: a directory tree\n- run_tests: a test runner log with passes, failures and a traceback\n- shell: command output, possibly with warnings and non-zero exit text\n- git_log: commit entries with hashes, authors, dates and messages\n- edit_file: a unified diff\n\nEmbed realistic specifics: real-looking paths, identifiers, versions, timestamps, hashes, durations, byte counts. Include at least one detail that a later reader would need to recall exactly. No commentary, no markdown fences, no explanation."
+      }
+    ],
+
+    "facts": [
+      {
+        "name": "domain",
+        "column_type": "sampler",
+        "sampler_type": "category",
+        "params": { "values": ["__DOMAIN__"] }
+      },
+      {
+        "name": "facet",
+        "column_type": "sampler",
+        "sampler_type": "category",
+        "params": {
+          "values": [
+            "a dependency version number",
+            "a TCP port",
+            "a file path",
+            "a function or method name",
+            "an environment variable name",
+            "a commit hash prefix",
+            "a retry or attempt count",
+            "a database or schema name",
+            "a measured duration",
+            "a numeric threshold or limit",
+            "a command-line flag",
+            "a named service, queue or bucket"
+          ]
+        }
+      },
+      {
+        "name": "fact",
+        "column_type": "llm-structured",
+        "prompt": "Invent ONE discrete, checkable fact that could appear during a software engineering session about: {{ domain }}.\n\nThe fact must be about {{ facet }}.\n\nIt must have exactly one correct short answer. Requirements:\n- `statement`: one sentence stating the fact as it would appear in the transcript.\n- `answer`: the shortest exact answer, at most six words, with no surrounding sentence.\n- `aliases`: two to four other strings that a correct reply might use instead (different units, abbreviations, casing, or an equivalent path). They must all denote the same thing.\n- `question`: one direct question, asked at the END of a long session, whose only correct reply is `answer`. It must not contain the answer, and must not restate the whole fact.\n\nHard constraints:\n- The answer must be specific enough that no other plausible value would also be correct.\n- Do not use a bare integer that could appear incidentally in other output; prefer a value with a unit, a name, or a path.\n- Do not use a timeout or a number of seconds unless the facet asks for a duration.\n- Avoid anything vague, subjective, or answerable with more than a few words.",
+        "output_format": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "statement": { "type": "string" },
+            "answer": { "type": "string" },
+            "aliases": { "type": "array", "items": { "type": "string" }, "minItems": 2, "maxItems": 4 },
+            "question": { "type": "string" }
+          },
+          "required": ["statement", "answer", "aliases", "question"]
+        }
+      }
+    ]
+  }
+}

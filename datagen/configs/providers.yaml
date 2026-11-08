@@ -1,0 +1,50 @@
+# Registro declarativo de provider + model aliases do NeMo Data Designer.
+#
+# `scripts/setup_models.py` instala isto em ~/.data-designer/ (idempotente).
+#
+# IMPORTANTE: o campo `api_key` guarda o NOME da variável de ambiente, não o
+# valor — é assim que o Data Designer modela provider. Nenhum segredo aparece
+# neste arquivo.
+#
+# `${OPENAI_BASE_URL}` é resolvido do ambiente pelo setup_models.py, para que o
+# endpoint usado na geração seja exatamente o mesmo que o agente usa no
+# experimento do Capítulo 4.
+
+providers:
+  - name: aliyun-qwen
+    endpoint: ${OPENAI_BASE_URL}
+    provider_type: openai
+    api_key: OPENAI_API_KEY
+    extra_body: null
+    extra_headers: null
+
+model_configs:
+  # Modelo principal: o mesmo do loop do agente no experimento.
+  - alias: qwen-text
+    model: qwen3.8-max
+    provider: aliyun-qwen
+    skip_health_check: false
+    inference_parameters:
+      generation_type: chat-completion
+      max_parallel_requests: 4
+      timeout: 300
+      extra_body: null
+      # Temperatura alta de propósito: o que se quer aqui é variedade de
+      # conteúdo de enchimento. O agente do experimento continua em 0.0.
+      temperature: 0.9
+      top_p: 0.95
+      max_tokens: 4096
+
+  # Modelo barato para os blocos volumosos (saídas de ferramenta, logs).
+  - alias: qwen-flash
+    model: qwen3.8-flash
+    provider: aliyun-qwen
+    skip_health_check: false
+    inference_parameters:
+      generation_type: chat-completion
+      max_parallel_requests: 10
+      timeout: 300
+      extra_body: null
+      temperature: 0.9
+      top_p: 0.95
+      max_tokens: 4096

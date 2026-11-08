@@ -1,0 +1,12 @@
+{
+  "cases": [
+    "case-01-api-service-debug",
+    "case-02-frontend-refactor",
+    "case-03-pipeline-migration-incident",
+    "case-04-flaky-ci-test",
+    "case-05-dependency-upgrade"
+  ],
+  "generator": "datagen/nemo-data-designer",
+  "name": "long_histories_128k",
+  "seed": 20261107
+}

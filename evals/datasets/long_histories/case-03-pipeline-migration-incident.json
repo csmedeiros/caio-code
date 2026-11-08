@@ -1,0 +1,1261 @@
+{
+  "description": "An incident review of a SQL migration that duplicated rows: per-shard metrics exported as a 2000-line CSV, a corrected backfill pacing and a runbook constraint restated at the end.",
+  "facts": [
+    {
+      "aliases": [
+        "every backfill batch writes to analytics.order_events"
+      ],
+      "answer": "the table the migration splits is analytics.order_events",
+      "id": "case-03-pipeline-migration-incident-f00",
+      "message_index": 5,
+      "position": "early",
+      "statement": "The migration splits one analytics table, and that table is the target of every backfill batch."
+    },
+    {
+      "aliases": [
+        "COPY instead of INSERT ... SELECT",
+        "backfill with COPY"
+      ],
+      "answer": "backfill with COPY, not INSERT ... SELECT, because the warehouse throttles row-by-row writes",
+      "id": "case-03-pipeline-migration-incident-f01",
+      "message_index": 10,
+      "position": "early",
+      "statement": "The backfill loads with COPY instead of a row-by-row insert, because the warehouse throttles single-row writes."
+    },
+    {
+      "aliases": [
+        "20260214_003_split_order_events.sql is the migration that split the table"
+      ],
+      "answer": "the migration that splits the table is migrations/20260214_003_split_order_events.sql",
+      "id": "case-03-pipeline-migration-incident-f02",
+      "message_index": 33,
+      "position": "middle",
+      "statement": "The migration that splits the table is one dated file under migrations/."
+    },
+    {
+      "aliases": [
+        "5000 rows per batch",
+        "batch size 5000"
+      ],
+      "answer": "batch size 5000 with a 2 s sleep between batches",
+      "id": "case-03-pipeline-migration-incident-f03",
+      "message_index": 48,
+      "position": "middle",
+      "statement": "The backfill runs in fixed-size batches with a pause between them, so the replica can catch up."
+    },
+    {
+      "aliases": [
+        "duplicate_rate 0.0413",
+        "shard 07 at 0.0413"
+      ],
+      "answer": "shard 07 peaked at a duplicate_rate of 0.0413",
+      "id": "case-03-pipeline-migration-incident-f04",
+      "message_index": 39,
+      "position": "middle",
+      "statement": "One shard peaks at a duplicate rate far above the others, visible only in the exported metrics table."
+    },
+    {
+      "aliases": [
+        "the PIPELINE_LOCK_TIMEOUT_MS environment variable"
+      ],
+      "answer": "PIPELINE_LOCK_TIMEOUT_MS",
+      "id": "case-03-pipeline-migration-incident-f05",
+      "message_index": 71,
+      "position": "late",
+      "statement": "The lock timeout of the backfill is read from one environment variable."
+    },
+    {
+      "aliases": [
+        "no VACUUM FULL in production"
+      ],
+      "answer": "never run VACUUM FULL on the production warehouse",
+      "id": "case-03-pipeline-migration-incident-f06",
+      "message_index": 76,
+      "position": "late",
+      "statement": "One maintenance command is forbidden on the production warehouse during the incident."
+    }
+  ],
+  "id": "case-03-pipeline-migration-incident",
+  "messages": [
+    {
+      "id": "case-03-pipeline-migration-incident-m000",
+      "metadata": {
+        "note": "the task statement; policies may never drop it",
+        "role_in_case": "task"
+      },
+      "name": null,
+      "pinned": true,
+      "role": "user",
+      "text": "Find why the order events pipeline duplicated rows, correct the backfill and write the rollback the on-call team can trust.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m001",
+      "metadata": {
+        "filler": "assistant_note"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "The metrics CSV is exported per shard, and the export truncates the duplicate rate. I re-read migrations/20260214_003_split_order_events.sql around `OrderEventsLoader.load` before settling on that.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m002",
+      "metadata": {},
+      "name": null,
+      "pinned": false,
+      "role": "user",
+      "text": "The order events pipeline duplicated roughly four percent of yesterday's rows during the split migration. We need the cause, the corrected backfill and a rollback we trust, in that order.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m003",
+      "metadata": {},
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "I will start from the migration and the loader, then quantify the duplicates per shard before proposing a backfill.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m004",
+      "metadata": {
+        "filler": "boilerplate"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Running `dbt run --select order_events` now and reporting back; no other file changes in flight.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m005",
+      "metadata": {
+        "states_fact": "target-table"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Scope confirmed: the table the migration splits is analytics.order_events, and every batch of the backfill writes to that same table, so nothing else needs a lock.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m006",
+      "metadata": {
+        "filler": "assistant_note"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "The metrics CSV is exported per shard, and the export truncates the duplicate rate. I re-read pipelines/order_events/dedupe.py around `shard_reader` before settling on that.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m007",
+      "metadata": {
+        "filler": "user_note"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "user",
+      "text": "Did anyone check the replica lag before shard 07 started?",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m008",
+      "metadata": {
+        "filler": "boilerplate"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Running `dbt run --select order_events` now and reporting back; no other file changes in flight.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m009",
+      "metadata": {
+        "filler": "boilerplate"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Running `python scripts/rollback_order_events.py --dry-run` now and reporting back; no other file changes in flight.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m010",
+      "metadata": {
+        "states_fact": "copy-decision"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Loading decision: backfill with COPY, not INSERT ... SELECT, because the warehouse throttles row-by-row writes and we already lost an hour to it this morning.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m011",
+      "metadata": {
+        "filler": "duplicate",
+        "note": "near-duplicate of an earlier turn"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "user",
+      "text": "Did anyone check the replica lag before shard 07 started?",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m012",
+      "metadata": {
+        "filler": "user_note"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "user",
+      "text": "Did anyone check the replica lag before shard 07 started?",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m013",
+      "metadata": {
+        "todo_items": 4,
+        "todo_step": 0
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Incident board, so the on-call handover has the same picture.",
+      "tool_call_id": null,
+      "tool_calls": [
+        {
+          "arguments": "{\"todos\": [{\"content\": \"Quantify duplicates per shard\", \"id\": \"case-03-pipeline-migration-incident-todo00\", \"order\": 0, \"priority\": \"high\", \"status\": \"in_progress\"}, {\"content\": \"Identify the migration that rewrote the table\", \"id\": \"case-03-pipeline-migration-incident-todo01\", \"order\": 1, \"priority\": \"medium\", \"status\": \"pending\"}, {\"content\": \"Correct the backfill pacing\", \"id\": \"case-03-pipeline-migration-incident-todo02\", \"order\": 2, \"priority\": \"medium\", \"status\": \"pending\"}, {\"content\": \"Verify the rollback script on a copy\", \"id\": \"case-03-pipeline-migration-incident-todo03\", \"order\": 3, \"priority\": \"medium\", \"status\": \"pending\"}]}",
+          "id": "case-03-pipeline-migration-incident-tc001",
+          "name": "write_todos"
+        }
+      ]
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m014",
+      "metadata": {
+        "todo_step": 0
+      },
+      "name": "write_todos",
+      "pinned": false,
+      "role": "tool",
+      "text": "Todos updated: 4 items, 0 completed, 4 open.",
+      "tool_call_id": "case-03-pipeline-migration-incident-tc001",
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m015",
+      "metadata": {
+        "filler": "boilerplate"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Running `grep -rn dedupe_key pipelines` now and reporting back; no other file changes in flight.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m016",
+      "metadata": {
+        "filler": "assistant_note"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "The backfill reuses one connection per batch and never resets the lock timeout. I re-read scripts/rollback_order_events.py around `shard_reader` before settling on that.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m017",
+      "metadata": {
+        "note": "superseded once the replica lag was measured",
+        "trap_for": "batch-size"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "user",
+      "text": "One operator suggested we start with batches of 20000 rows and no sleep, to finish before the analytics standup.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m018",
+      "metadata": {
+        "filler": "duplicate",
+        "note": "near-duplicate of an earlier turn"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "user",
+      "text": "Did anyone check the replica lag before shard 07 started?",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m019",
+      "metadata": {
+        "filler": "small_tool_run"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Let me check scripts/rollback_order_events.py with `dbt run --select order_events`.",
+      "tool_call_id": null,
+      "tool_calls": [
+        {
+          "arguments": "{\"path\": \"scripts/rollback_order_events.py\"}",
+          "id": "case-03-pipeline-migration-incident-tc002",
+          "name": "read_file"
+        }
+      ]
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m020",
+      "metadata": {
+        "filler": "small_tool_run"
+      },
+      "name": "read_file",
+      "pinned": false,
+      "role": "tool",
+      "text": "--- airflow dags backfill order_events -s 2026-02-01 ---\nread_file: 21 lines, utf-8, no trailing newline stripped\nline numbers are 1-based, as in the editor\n 1|         reader = replica_reader()\n 2|     if shard == 7:\n 3|         reader = replica_reader()\n 4|         connection.execute(copy_stmt, batch)\n 5|     if shard == 7:\n 6|     if shard == 7:\n 7|     loader.load(batch, table='analytics.order_events')\n 8|     if shard == 7:\n 9|         reader = replica_reader()\n10|     loader.load(batch, table='analytics.order_events')\n11|     if shard == 7:\n12|     dedupe_key = f'{row.order_id}:{row.event_ts}'\n13|     with engine.begin() as connection:\n14|     with engine.begin() as connection:\n15|     if shard == 7:\n16|     loader.load(batch, table='analytics.order_events')\n17|     loader.load(batch, table='analytics.order_events')\n18|     loader.load(batch, table='analytics.order_events')",
+      "tool_call_id": "case-03-pipeline-migration-incident-tc002",
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m021",
+      "metadata": {
+        "filler": "user_note"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "user",
+      "text": "Did anyone check the replica lag before shard 07 started?",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m022",
+      "metadata": {
+        "filler": "duplicate",
+        "note": "near-duplicate of an earlier turn"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "user",
+      "text": "Did anyone check the replica lag before shard 07 started?",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m023",
+      "metadata": {},
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Reading the migration that started the incident.",
+      "tool_call_id": null,
+      "tool_calls": [
+        {
+          "arguments": "{\"command\": \"psql -f migrations/20260214_003_split_order_events.sql --echo-all\"}",
+          "id": "case-03-pipeline-migration-incident-tc003",
+          "name": "execute"
+        }
+      ]
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m024",
+      "metadata": {
+        "tool_output_chars": 15509,
+        "tool_output_lines": 300
+      },
+      "name": "execute",
+      "pinned": false,
+      "role": "tool",
+      "text": "$ psql -f migrations/20260214_003_split_order_events.sql --echo-all\ncaptured 300 lines, exit status follows\n01:47:45 INFO    lock acquired on analytics.order_events\n19:27:47 ERROR   shard reader lagging by 42 s\n16:40:30 INFO    lock acquired on analytics.order_events\n09:53:04 WARNING lock acquired on analytics.order_events\n23:30:08 ERROR   batch committed, rows written 4987\n16:18:14 ERROR   lock acquired on analytics.order_events\n11:41:05 INFO    batch committed, rows written 4987\n09:55:46 DEBUG   lock acquired on analytics.order_events\n02:08:34 INFO    lock acquired on analytics.order_events\n22:15:15 INFO    COPY finished in 9.4 s\n22:18:18 WARNING lock acquired on analytics.order_events\n15:36:28 ERROR   COPY finished in 9.4 s\n13:25:46 INFO    COPY finished in 9.4 s\n06:12:01 WARNING watermark advanced to 2026-02-14T03:00:00Z\n18:53:34 ERROR   shard reader lagging by 42 s\n21:05:18 INFO    dedupe key recomputed for 118 rows\n09:58:55 INFO    COPY finished in 9.4 s\n16:05:06 ERROR   dedupe key recomputed for 118 rows\n12:16:58 DEBUG   COPY finished in 9.4 s\n00:12:20 ERROR   batch committed, rows written 4987\n02:15:48 INFO    batch committed, rows written 4987\n13:56:54 WARNING batch committed, rows written 4987\n19:03:46 DEBUG   dedupe key recomputed for 118 rows\n19:04:54 INFO    shard reader lagging by 42 s\n02:50:54 DEBUG   watermark advanced to 2026-02-14T03:00:00Z\n05:20:08 WARNING lock acquired on analytics.order_events\n12:00:43 INFO    lock acquired on analytics.order_events\n22:15:39 DEBUG   lock acquired on analytics.order_events\n16:27:58 ERROR   lock acquired on analytics.order_events\n22:58:03 DEBUG   COPY finished in 9.4 s\n08:50:48 WARNING lock acquired on analytics.order_events\n02:07:43 ERROR   dedupe key recomputed for 118 rows\n08:03:34 WARNING shard reader lagging by 42 s\n09:26:32 WARNING batch committed, rows written 4987\n04:44:28 INFO    batch committed, rows written 4987\n00:48:39 WARNING shard reader lagging by 42 s\n01:36:18 WARNING batch committed, rows written 4987\n13:30:17 INFO    dedupe key recomputed for 118 rows\n01:39:40 DEBUG   watermark advanced to 2026-02-14T03:00:00Z\n16:01:52 INFO    watermark advanced to 2026-02-14T03:00:00Z\n23:38:53 DEBUG   lock acquired on analytics.order_events\n12:48:15 DEBUG   dedupe key recomputed for 118 rows\n12:57:58 INFO    watermark advanced to 2026-02-14T03:00:00Z\n20:21:09 DEBUG   watermark advanced to 2026-02-14T03:00:00Z\n04:17:56 INFO    batch committed, rows written 4987\n00:13:17 INFO    COPY finished in 9.4 s\n19:12:25 INFO    watermark advanced to 2026-02-14T03:00:00Z\n10:50:16 ERROR   COPY finished in 9.4 s\n20:59:30 DEBUG   COPY finished in 9.4 s\n10:42:34 WARNING COPY finished in 9.4 s\n13:06:34 INFO    watermark advanced to 2026-02-14T03:00:00Z\n12:23:44 INFO    shard reader lagging by 42 s\n20:20:04 ERROR   batch committed, rows written 4987\n16:11:49 INFO    batch committed, rows written 4987\n19:24:23 INFO    batch committed, rows written 4987\n11:33:39 ERROR   shard reader lagging by 42 s\n01:15:22 INFO    COPY finished in 9.4 s\n03:35:46 INFO    shard reader lagging by 42 s\n13:06:35 INFO    lock acquired on analytics.order_events\n02:53:12 WARNING lock acquired on analytics.order_events\n05:03:47 ERROR   watermark advanced to 2026-02-14T03:00:00Z\n21:39:43 WARNING shard reader lagging by 42 s\n07:06:16 WARNING batch committed, rows written 4987\n20:52:47 ERROR   shard reader lagging by 42 s\n15:36:31 INFO    COPY finished in 9.4 s\n08:25:57 INFO    COPY finished in 9.4 s\n05:05:15 WARNING batch committed, rows written 4987\n14:15:51 INFO    lock acquired on analytics.order_events\n14:36:16 DEBUG   batch committed, rows written 4987\n08:00:52 WARNING COPY finished in 9.4 s\n09:20:28 INFO    COPY finished in 9.4 s\n12:37:30 INFO    dedupe key recomputed for 118 rows\n19:54:43 INFO    shard reader lagging by 42 s\n23:53:43 ERROR   watermark advanced to 2026-02-14T03:00:00Z\n03:38:17 INFO    lock acquired on analytics.order_events\n16:27:14 INFO    watermark advanced to 2026-02-14T03:00:00Z\n21:41:23 DEBUG   lock acquired on analytics.order_events\n09:30:55 WARNING lock acquired on analytics.order_events\n13:23:23 WARNING dedupe key recomputed for 118 rows\n05:47:25 ERROR   watermark advanced to 2026-02-14T03:00:00Z\n19:44:35 DEBUG   lock acquired on analytics.order_events\n02:01:06 ERROR   watermark advanced to 2026-02-14T03:00:00Z\n03:41:24 ERROR   shard reader lagging by 42 s\n04:48:47 ERROR   batch committed, rows written 4987\n12:06:03 INFO    dedupe key recomputed for 118 rows\n01:09:52 INFO    dedupe key recomputed for 118 rows\n00:42:48 INFO    batch committed, rows written 4987\n04:50:05 ERROR   COPY finished in 9.4 s\n04:08:30 WARNING watermark advanced to 2026-02-14T03:00:00Z\n10:09:09 DEBUG   COPY finished in 9.4 s\n04:01:15 INFO    watermark advanced to 2026-02-14T03:00:00Z\n06:12:38 INFO    batch committed, rows written 4987\n03:44:33 DEBUG   shard reader lagging by 42 s\n23:06:36 DEBUG   watermark advanced to 2026-02-14T03:00:00Z\n11:59:50 INFO    shard reader lagging by 42 s\n00:32:58 INFO    shard reader lagging by 42 s\n20:24:37 INFO    dedupe key recomputed for 118 rows\n23:28:31 WARNING dedupe key recomputed for 118 rows\n22:00:35 ERROR   dedupe key recomputed for 118 rows\n20:52:23 INFO    shard reader lagging by 42 s\n04:52:21 DEBUG   shard reader lagging by 42 s\n04:40:06 INFO    shard reader lagging by 42 s\n12:00:03 INFO    lock acquired on analytics.order_events\n07:38:10 DEBUG   COPY finished in 9.4 s\n04:22:10 INFO    watermark advanced to 2026-02-14T03:00:00Z\n08:58:36 ERROR   lock acquired on analytics.order_events\n14:24:06 INFO    lock acquired on analytics.order_events\n06:35:13 INFO    shard reader lagging by 42 s\n17:26:03 INFO    dedupe key recomputed for 118 rows\n10:49:35 INFO    batch committed, rows written 4987\n18:54:07 DEBUG   COPY finished in 9.4 s\n06:45:48 INFO    lock acquired on analytics.order_events\n01:53:00 WARNING watermark advanced to 2026-02-14T03:00:00Z\n04:18:55 INFO    batch committed, rows written 4987\n21:42:24 INFO    dedupe key recomputed for 118 rows\n03:26:37 WARNING lock acquired on analytics.order_events\n09:31:50 INFO    COPY finished in 9.4 s\n13:27:11 WARNING watermark advanced to 2026-02-14T03:00:00Z\n21:13:42 WARNING COPY finished in 9.4 s\n15:14:35 ERROR   dedupe key recomputed for 118 rows\n04:27:45 WARNING lock acquired on analytics.order_events\n01:07:51 WARNING batch committed, rows written 4987\n10:12:40 ERROR   batch committed, rows written 4987\n04:14:28 INFO    watermark advanced to 2026-02-14T03:00:00Z\n18:11:46 DEBUG   batch committed, rows written 4987\n03:07:05 WARNING shard reader lagging by 42 s\n10:25:06 DEBUG   COPY finished in 9.4 s\n01:13:15 DEBUG   lock acquired on analytics.order_events\n11:56:18 WARNING shard reader lagging by 42 s\n08:24:24 WARNING lock acquired on analytics.order_events\n01:08:48 DEBUG   COPY finished in 9.4 s\n23:42:47 WARNING batch committed, rows written 4987\n09:01:29 INFO    watermark advanced to 2026-02-14T03:00:00Z\n22:13:31 INFO    watermark advanced to 2026-02-14T03:00:00Z\n11:31:31 WARNING shard reader lagging by 42 s\n12:36:05 INFO    lock acquired on analytics.order_events\n14:21:08 DEBUG   watermark advanced to 2026-02-14T03:00:00Z\n20:07:51 DEBUG   dedupe key recomputed for 118 rows\n06:46:42 DEBUG   dedupe key recomputed for 118 rows\n01:47:05 ERROR   COPY finished in 9.4 s\n14:21:06 WARNING dedupe key recomputed for 118 rows\n06:22:13 INFO    lock acquired on analytics.order_events\n22:24:05 INFO    batch committed, rows written 4987\n15:11:55 WARNING lock acquired on analytics.order_events\n12:31:38 DEBUG   COPY finished in 9.4 s\n21:17:17 DEBUG   COPY finished in 9.4 s\n10:29:35 DEBUG   COPY finished in 9.4 s\n01:24:36 WARNING batch committed, rows written 4987\n04:40:48 DEBUG   batch committed, rows written 4987\n17:08:06 ERROR   shard reader lagging by 42 s\n08:36:08 INFO    lock acquired on analytics.order_events\n23:41:52 WARNING batch committed, rows written 4987\n02:31:52 WARNING COPY finished in 9.4 s\n01:30:06 WARNING dedupe key recomputed for 118 rows\n12:13:02 WARNING COPY finished in 9.4 s\n21:23:13 ERROR   dedupe key recomputed for 118 rows\n14:12:37 INFO    lock acquired on analytics.order_events\n03:57:35 INFO    lock acquired on analytics.order_events\n04:08:26 INFO    watermark advanced to 2026-02-14T03:00:00Z\n19:28:18 WARNING batch committed, rows written 4987\n23:00:28 DEBUG   watermark advanced to 2026-02-14T03:00:00Z\n16:52:28 DEBUG   dedupe key recomputed for 118 rows\n13:29:57 INFO    watermark advanced to 2026-02-14T03:00:00Z\n23:11:21 DEBUG   COPY finished in 9.4 s\n10:05:45 INFO    lock acquired on analytics.order_events\n16:15:54 WARNING shard reader lagging by 42 s\n07:41:17 WARNING batch committed, rows written 4987\n19:21:16 WARNING shard reader lagging by 42 s\n15:06:53 INFO    COPY finished in 9.4 s\n01:41:59 WARNING watermark advanced to 2026-02-14T03:00:00Z\n02:40:22 WARNING lock acquired on analytics.order_events\n06:15:33 WARNING shard reader lagging by 42 s\n15:37:20 INFO    batch committed, rows written 4987\n10:02:12 INFO    COPY finished in 9.4 s\n20:08:05 WARNING lock acquired on analytics.order_events\n08:54:26 WARNING watermark advanced to 2026-02-14T03:00:00Z\n03:34:19 INFO    COPY finished in 9.4 s\n12:44:25 ERROR   watermark advanced to 2026-02-14T03:00:00Z\n03:06:26 INFO    shard reader lagging by 42 s\n09:44:45 DEBUG   watermark advanced to 2026-02-14T03:00:00Z\n09:47:09 ERROR   watermark advanced to 2026-02-14T03:00:00Z\n00:47:39 INFO    watermark advanced to 2026-02-14T03:00:00Z\n16:16:08 ERROR   watermark advanced to 2026-02-14T03:00:00Z\n14:56:43 INFO    COPY finished in 9.4 s\n23:39:05 DEBUG   dedupe key recomputed for 118 rows\n07:14:55 DEBUG   lock acquired on analytics.order_events\n22:48:00 WARNING watermark advanced to 2026-02-14T03:00:00Z\n01:32:15 DEBUG   watermark advanced to 2026-02-14T03:00:00Z\n02:20:31 WARNING lock acquired on analytics.order_events\n01:04:31 ERROR   COPY finished in 9.4 s\n12:41:08 INFO    shard reader lagging by 42 s\n19:10:16 INFO    watermark advanced to 2026-02-14T03:00:00Z\n18:38:07 DEBUG   shard reader lagging by 42 s\n23:22:38 ERROR   shard reader lagging by 42 s\n03:44:04 DEBUG   lock acquired on analytics.order_events\n16:56:46 ERROR   watermark advanced to 2026-02-14T03:00:00Z\n08:14:37 INFO    COPY finished in 9.4 s\n11:29:01 ERROR   dedupe key recomputed for 118 rows\n03:00:47 ERROR   watermark advanced to 2026-02-14T03:00:00Z\n21:17:50 ERROR   lock acquired on analytics.order_events\n13:02:26 WARNING dedupe key recomputed for 118 rows\n03:55:50 DEBUG   lock acquired on analytics.order_events\n12:03:03 INFO    shard reader lagging by 42 s\n20:01:18 ERROR   lock acquired on analytics.order_events\n13:40:03 WARNING lock acquired on analytics.order_events\n01:07:22 DEBUG   shard reader lagging by 42 s\n11:02:43 ERROR   shard reader lagging by 42 s\n17:34:54 WARNING lock acquired on analytics.order_events\nTraceback (most recent call last):\n  File \"pipelines/order_events/extract.py\", line 73, in backfill_batch\n  File \"sql/analytics/order_events.sql\", line 232, in backfill_batch\n  File \"pipelines/order_events/load.py\", line 305, in event_ts\n  File \"migrations/20260214_003_split_order_events.sql\", line 247, in event_ts\nAssertionError: The backfill reuses one connection per batch and never resets t...\n11:44:11 ERROR   batch committed, rows written 4987\n08:18:03 ERROR   watermark advanced to 2026-02-14T03:00:00Z\n01:59:15 INFO    lock acquired on analytics.order_events\n07:21:09 ERROR   dedupe key recomputed for 118 rows\n05:18:10 ERROR   watermark advanced to 2026-02-14T03:00:00Z\n10:30:21 INFO    lock acquired on analytics.order_events\n04:00:17 INFO    lock acquired on analytics.order_events\n00:49:24 WARNING watermark advanced to 2026-02-14T03:00:00Z\n00:16:29 DEBUG   COPY finished in 9.4 s\n02:12:55 ERROR   COPY finished in 9.4 s\n04:40:51 DEBUG   watermark advanced to 2026-02-14T03:00:00Z\n17:04:30 INFO    batch committed, rows written 4987\n14:07:04 WARNING watermark advanced to 2026-02-14T03:00:00Z\n03:37:38 WARNING COPY finished in 9.4 s\n23:11:45 INFO    batch committed, rows written 4987\n15:38:03 WARNING shard reader lagging by 42 s\n20:46:44 INFO    shard reader lagging by 42 s\n08:48:36 DEBUG   shard reader lagging by 42 s\n03:07:58 ERROR   shard reader lagging by 42 s\n21:19:06 INFO    dedupe key recomputed for 118 rows\n01:53:45 WARNING COPY finished in 9.4 s\n10:06:49 ERROR   watermark advanced to 2026-02-14T03:00:00Z\n17:41:24 DEBUG   batch committed, rows written 4987\n22:34:45 ERROR   batch committed, rows written 4987\n04:25:48 ERROR   dedupe key recomputed for 118 rows\n16:17:36 ERROR   shard reader lagging by 42 s\n17:59:17 WARNING COPY finished in 9.4 s\n20:10:29 INFO    COPY finished in 9.4 s\n06:29:59 INFO    batch committed, rows written 4987\n07:23:54 INFO    watermark advanced to 2026-02-14T03:00:00Z\n12:11:24 INFO    lock acquired on analytics.order_events\n23:26:54 INFO    COPY finished in 9.4 s\n01:21:16 WARNING COPY finished in 9.4 s\n19:12:34 INFO    shard reader lagging by 42 s\n10:17:11 DEBUG   COPY finished in 9.4 s\n10:29:27 INFO    dedupe key recomputed for 118 rows\n14:48:09 WARNING batch committed, rows written 4987\n06:24:37 INFO    shard reader lagging by 42 s\n03:01:01 DEBUG   COPY finished in 9.4 s\n00:02:18 ERROR   shard reader lagging by 42 s\n22:58:40 INFO    batch committed, rows written 4987\n01:06:41 INFO    dedupe key recomputed for 118 rows\n07:42:55 WARNING COPY finished in 9.4 s\n13:11:13 WARNING batch committed, rows written 4987\n00:57:38 ERROR   shard reader lagging by 42 s\n04:22:17 ERROR   lock acquired on analytics.order_events\n14:31:42 INFO    watermark advanced to 2026-02-14T03:00:00Z\n03:57:17 WARNING watermark advanced to 2026-02-14T03:00:00Z\n12:59:44 WARNING COPY finished in 9.4 s\n16:02:57 ERROR   shard reader lagging by 42 s\n11:58:47 WARNING shard reader lagging by 42 s\n00:07:38 DEBUG   batch committed, rows written 4987\n16:34:30 INFO    batch committed, rows written 4987\n04:22:10 ERROR   watermark advanced to 2026-02-14T03:00:00Z\n15:26:18 WARNING shard reader lagging by 42 s\n23:40:43 DEBUG   dedupe key recomputed for 118 rows\n03:04:41 ERROR   shard reader lagging by 42 s\n17:35:47 DEBUG   dedupe key recomputed for 118 rows\n19:04:30 ERROR   dedupe key recomputed for 118 rows\n16:39:42 WARNING watermark advanced to 2026-02-14T03:00:00Z\n16:08:53 WARNING lock acquired on analytics.order_events\n17:50:39 INFO    lock acquired on analytics.order_events\n01:41:43 DEBUG   batch committed, rows written 4987\n20:00:50 WARNING batch committed, rows written 4987\n03:10:52 INFO    dedupe key recomputed for 118 rows\n18:38:00 WARNING dedupe key recomputed for 118 rows\n09:03:46 WARNING batch committed, rows written 4987\n03:38:47 ERROR   dedupe key recomputed for 118 rows\n13:10:35 DEBUG   COPY finished in 9.4 s\n22:29:34 INFO    lock acquired on analytics.order_events\n04:48:45 ERROR   shard reader lagging by 42 s\n14:59:09 DEBUG   shard reader lagging by 42 s\n14:32:57 DEBUG   watermark advanced to 2026-02-14T03:00:00Z\n20:18:24 WARNING lock acquired on analytics.order_events\n18:11:22 INFO    lock acquired on analytics.order_events\n21:16:32 INFO    shard reader lagging by 42 s\n11:42:41 WARNING lock acquired on analytics.order_events\n20:18:22 INFO    lock acquired on analytics.order_events\n09:03:33 DEBUG   watermark advanced to 2026-02-14T03:00:00Z\n14:05:28 INFO    shard reader lagging by 42 s\n07:09:23 DEBUG   dedupe key recomputed for 118 rows\n19:03:46 INFO    watermark advanced to 2026-02-14T03:00:00Z\n18:12:07 INFO    lock acquired on analytics.order_events\n11:26:00 WARNING dedupe key recomputed for 118 rows",
+      "tool_call_id": "case-03-pipeline-migration-incident-tc003",
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m025",
+      "metadata": {},
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "The migration adds a column with a default, which rewrites the table and holds the lock longer than the DAG expects.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m026",
+      "metadata": {
+        "filler": "boilerplate"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Running `dbt run --select order_events` now and reporting back; no other file changes in flight.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m027",
+      "metadata": {
+        "attempt": 1,
+        "distractor": "repeated_tool_call"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Running the rollback dry run again to confirm it is idempotent.",
+      "tool_call_id": null,
+      "tool_calls": [
+        {
+          "arguments": "{\"command\": \"python scripts/rollback_order_events.py --dry-run\"}",
+          "id": "case-03-pipeline-migration-incident-tc004",
+          "name": "execute"
+        }
+      ]
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m028",
+      "metadata": {
+        "attempt": 1,
+        "distractor": "repeated_tool_call"
+      },
+      "name": "execute",
+      "pinned": false,
+      "role": "tool",
+      "text": "dry run: 14 batches would be reverted, 0 rows written\nlock acquired, lock released",
+      "tool_call_id": "case-03-pipeline-migration-incident-tc004",
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m029",
+      "metadata": {
+        "attempt": 2,
+        "distractor": "repeated_tool_call"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Running the rollback dry run again to confirm it is idempotent.",
+      "tool_call_id": null,
+      "tool_calls": [
+        {
+          "arguments": "{\"command\": \"python scripts/rollback_order_events.py --dry-run\"}",
+          "id": "case-03-pipeline-migration-incident-tc005",
+          "name": "execute"
+        }
+      ]
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m030",
+      "metadata": {
+        "attempt": 2,
+        "distractor": "repeated_tool_call"
+      },
+      "name": "execute",
+      "pinned": false,
+      "role": "tool",
+      "text": "dry run: 14 batches would be reverted, 0 rows written\nlock acquired, lock released",
+      "tool_call_id": "case-03-pipeline-migration-incident-tc005",
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m031",
+      "metadata": {
+        "attempt": 3,
+        "distractor": "repeated_tool_call"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Running the rollback dry run again to confirm it is idempotent.",
+      "tool_call_id": null,
+      "tool_calls": [
+        {
+          "arguments": "{\"command\": \"python scripts/rollback_order_events.py --dry-run\"}",
+          "id": "case-03-pipeline-migration-incident-tc006",
+          "name": "execute"
+        }
+      ]
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m032",
+      "metadata": {
+        "attempt": 3,
+        "distractor": "repeated_tool_call"
+      },
+      "name": "execute",
+      "pinned": false,
+      "role": "tool",
+      "text": "dry run: 14 batches would be reverted, 0 rows written\nlock acquired, lock released",
+      "tool_call_id": "case-03-pipeline-migration-incident-tc006",
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m033",
+      "metadata": {
+        "states_fact": "migration-file"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "The migration that splits the table is migrations/20260214_003_split_order_events.sql; it is the third migration of the day and the only one that touches the events table.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m034",
+      "metadata": {
+        "filler": "duplicate",
+        "note": "near-duplicate of an earlier turn"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Running the rollback dry run again to confirm it is idempotent.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m035",
+      "metadata": {
+        "filler": "small_tool_run"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Let me check sql/analytics/order_events.sql with `airflow dags backfill order_events -s 2026-02-01`.",
+      "tool_call_id": null,
+      "tool_calls": [
+        {
+          "arguments": "{\"path\": \"sql/analytics/order_events.sql\"}",
+          "id": "case-03-pipeline-migration-incident-tc007",
+          "name": "read_file"
+        }
+      ]
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m036",
+      "metadata": {
+        "filler": "small_tool_run"
+      },
+      "name": "read_file",
+      "pinned": false,
+      "role": "tool",
+      "text": "$ airflow dags backfill order_events -s 2026-02-01\ncollected 0 items\nsql/analytics/order_events.sql::test_run_backfill_001 PASSED\n    shard reader lagging by 42 s\ntests/pipelines/test_order_events.py::test_run_backfill_002 PASSED\n    shard reader lagging by 42 s\n    shard reader lagging by 42 s\n    lock acquired on analytics.order_events\nconfig/pipeline.yaml::test_event_ts_003 PASSED\n    COPY finished in 9.4 s\n    dedupe key recomputed for 118 rows\nscripts/rollback_order_events.py::test_backfill_batch_004 PASSED\n    shard reader lagging by 42 s\npipelines/order_events/dedupe.py::test_shard_reader_005 PASSED\n    watermark advanced to 2026-02-14T03:00:00Z\n    lock acquired on analytics.order_events\n    dedupe key recomputed for 118 rows\npipelines/order_events/extract.py::test_load_006 PASSED\n    watermark advanced to 2026-02-14T03:00:00Z\n    COPY finished in 9.4 s\n    COPY finished in 9.4 s\n    lock acquired on analytics.order_events",
+      "tool_call_id": "case-03-pipeline-migration-incident-tc007",
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m037",
+      "metadata": {
+        "filler": "duplicate",
+        "note": "near-duplicate of an earlier turn"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Let me check sql/analytics/order_events.sql with `airflow dags backfill order_events -s 2026-02-01`.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m038",
+      "metadata": {},
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Pulling the per-shard metrics export to find the worst offender.",
+      "tool_call_id": null,
+      "tool_calls": [
+        {
+          "arguments": "{\"command\": \"python -m pipelines.order_events.report --format csv\"}",
+          "id": "case-03-pipeline-migration-incident-tc008",
+          "name": "execute"
+        }
+      ]
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m039",
+      "metadata": {
+        "states_fact": "worst-shard",
+        "tool_output_chars": 63339,
+        "tool_output_lines": 1402
+      },
+      "name": "execute",
+      "pinned": false,
+      "role": "tool",
+      "text": "shard,batch_id,rows_read,rows_written,duplicate_rate,duration_ms\nreplica,shard,replica,shard,0.9111,250552\nreplica,batch,backfill,backfill,0.1881,307859\nbackfill,replica,batch,backfill,0.7315,597442\nbackfill,replica,replica,replica,0.0999,699662\nbackfill,shard,warehouse,warehouse,0.7643,783537\nshard,warehouse,replica,backfill,0.0386,65992\nwarehouse,warehouse,replica,backfill,0.6829,260542\nwarehouse,warehouse,replica,batch,0.9014,954142\nbackfill,shard,batch,batch,0.2282,464319\nbatch,shard,batch,warehouse,0.0090,567908\nshard,batch,replica,shard,0.5110,347764\nbackfill,replica,batch,shard,0.2946,348346\nwarehouse,replica,backfill,shard,0.8191,796798\nbatch,replica,replica,backfill,0.8175,500826\nshard,shard,warehouse,warehouse,0.5640,319848\nbatch,backfill,batch,batch,0.0913,148828\nbatch,backfill,warehouse,backfill,0.6177,933950\nbackfill,batch,batch,batch,0.9076,890690\nshard,batch,shard,warehouse,0.7064,670113\nbackfill,backfill,backfill,batch,0.7284,108006\nreplica,shard,warehouse,shard,0.8331,278945\nbackfill,warehouse,warehouse,shard,0.8887,42932\nbatch,replica,warehouse,warehouse,0.4194,445372\nbackfill,warehouse,warehouse,batch,0.2730,467869\nbatch,backfill,shard,warehouse,0.0677,435711\nbackfill,replica,shard,replica,0.2419,963011\nbackfill,warehouse,warehouse,shard,0.2376,42302\nbackfill,replica,batch,replica,0.0945,354676\nshard,batch,warehouse,backfill,0.3037,58846\nreplica,replica,batch,batch,0.8634,880339\nreplica,warehouse,replica,backfill,0.5742,548611\nwarehouse,warehouse,shard,shard,0.4951,64558\nbackfill,warehouse,batch,batch,0.9445,888594\nbackfill,shard,warehouse,backfill,0.2147,928772\nbatch,batch,backfill,shard,0.7601,631261\nbackfill,batch,replica,backfill,0.4388,809549\nbatch,backfill,warehouse,backfill,0.2776,741456\nbatch,warehouse,batch,warehouse,0.4781,459665\nwarehouse,batch,warehouse,shard,0.7879,372715\nshard,backfill,batch,warehouse,0.0680,121464\nshard,backfill,backfill,batch,0.4006,381538\nbatch,batch,shard,replica,0.4484,881748\nbatch,batch,shard,backfill,0.2924,537947\nreplica,replica,backfill,shard,0.0621,3515\nbackfill,replica,shard,warehouse,0.9530,544212\nwarehouse,shard,shard,replica,0.6107,339975\nwarehouse,shard,shard,backfill,0.1135,888165\nreplica,warehouse,shard,shard,0.4681,141932\nbackfill,batch,warehouse,warehouse,0.3530,131462\nshard,warehouse,replica,backfill,0.0786,983940\nreplica,backfill,replica,replica,0.2236,204005\nshard,replica,warehouse,replica,0.9116,15158\nreplica,replica,shard,backfill,0.7269,708597\nshard,warehouse,warehouse,warehouse,0.1859,43005\nbatch,shard,backfill,batch,0.7137,598055\nbatch,replica,replica,warehouse,0.2610,433479\nbackfill,shard,replica,replica,0.5008,523994\nwarehouse,warehouse,shard,batch,0.8148,38289\nbackfill,batch,replica,warehouse,0.6853,357725\nwarehouse,replica,replica,warehouse,0.4494,777781\nshard,backfill,warehouse,replica,0.0979,876258\nbatch,backfill,shard,batch,0.6400,49175\nbackfill,warehouse,replica,backfill,0.3098,102971\nbatch,batch,backfill,batch,0.3424,721129\nreplica,warehouse,backfill,warehouse,0.7548,743732\nbatch,batch,warehouse,backfill,0.1012,752622\nwarehouse,batch,batch,shard,0.5594,108320\nbatch,replica,replica,warehouse,0.1297,516599\nbackfill,warehouse,warehouse,backfill,0.5759,666022\nwarehouse,replica,warehouse,batch,0.2515,576749\nwarehouse,shard,backfill,replica,0.6296,280586\nshard,shard,shard,warehouse,0.8730,698314\nshard,warehouse,shard,batch,0.9606,77142\nbackfill,warehouse,backfill,shard,0.4213,319894\nwarehouse,backfill,shard,backfill,0.5829,435843\nbackfill,shard,backfill,warehouse,0.7904,900077\nshard,replica,replica,replica,0.2091,70740\nbatch,shard,shard,shard,0.7345,361800\nshard,batch,shard,shard,0.6678,897306\nreplica,batch,replica,backfill,0.4895,60886\nbatch,batch,shard,backfill,0.8362,633492\nwarehouse,replica,warehouse,backfill,0.2351,540046\nshard,batch,replica,batch,0.1681,339058\nbatch,warehouse,warehouse,replica,0.4755,112452\nbackfill,replica,batch,batch,0.9335,36147\nreplica,batch,batch,warehouse,0.5422,62825\nbatch,replica,warehouse,shard,0.6801,744545\nreplica,backfill,batch,warehouse,0.1863,520447\nbatch,replica,backfill,replica,0.2730,789956\nwarehouse,shard,backfill,shard,0.3343,522266\nbatch,warehouse,shard,backfill,0.4827,628259\nreplica,backfill,replica,batch,0.5773,657623\nshard,batch,warehouse,warehouse,0.2942,297090\nbackfill,batch,replica,replica,0.5340,403182\nwarehouse,shard,batch,warehouse,0.9417,800038\nbackfill,replica,batch,backfill,0.1434,854714\nbatch,shard,backfill,batch,0.4156,440116\nwarehouse,warehouse,replica,backfill,0.2044,927622\nwarehouse,warehouse,shard,batch,0.0910,642283\nwarehouse,batch,replica,backfill,0.3094,279951\nwarehouse,replica,batch,warehouse,0.6957,177527\nbatch,shard,replica,shard,0.9924,830124\nreplica,backfill,warehouse,batch,0.2544,605612\nwarehouse,replica,replica,replica,0.4613,587719\nwarehouse,backfill,replica,shard,0.0740,160877\nbatch,backfill,replica,batch,0.4351,371182\nbackfill,backfill,batch,batch,0.2898,892379\nbatch,warehouse,backfill,warehouse,0.7766,652818\nwarehouse,shard,shard,batch,0.3707,927382\nshard,batch,batch,shard,0.6908,201553\nreplica,shard,backfill,batch,0.1765,936448\nshard,batch,replica,batch,0.5783,321214\nshard,shard,replica,shard,0.9607,750659\nbackfill,warehouse,backfill,shard,0.3388,358650\nbatch,replica,warehouse,shard,0.8331,91015\nreplica,batch,shard,batch,0.5740,546089\nreplica,shard,shard,backfill,0.9302,583644\nbackfill,batch,backfill,replica,0.8109,286339\nbatch,backfill,warehouse,shard,0.2261,876608\nshard,backfill,batch,backfill,0.1609,971684\nwarehouse,shard,replica,shard,0.1557,341761\nbackfill,backfill,backfill,warehouse,0.0061,814169\nbackfill,replica,backfill,backfill,0.3352,40838\nshard,shard,backfill,warehouse,0.7348,184365\nbackfill,batch,backfill,shard,0.6518,721604\nbackfill,backfill,warehouse,warehouse,0.8970,636575\nbackfill,warehouse,batch,warehouse,0.8099,479963\nbatch,backfill,batch,replica,0.0664,234739\nreplica,batch,warehouse,replica,0.0876,635191\nshard,backfill,replica,replica,0.9287,600361\nshard,warehouse,warehouse,warehouse,0.8253,647091\nwarehouse,backfill,warehouse,replica,0.6149,50509\nbatch,batch,warehouse,warehouse,0.1943,505814\nreplica,shard,backfill,shard,0.1761,773141\nshard,batch,replica,backfill,0.0444,815951\nwarehouse,warehouse,replica,replica,0.3971,620979\nshard,warehouse,replica,replica,0.8203,565942\nbatch,backfill,backfill,backfill,0.6318,724817\nwarehouse,batch,warehouse,batch,0.1469,445825\nbatch,batch,warehouse,warehouse,0.6474,468724\nbackfill,shard,replica,backfill,0.5183,854702\nreplica,replica,batch,warehouse,0.7818,747572\nwarehouse,backfill,backfill,backfill,0.0352,523163\nbackfill,replica,backfill,replica,0.9388,110911\nreplica,batch,backfill,warehouse,0.0426,408488\nshard,batch,backfill,batch,0.0267,521778\nshard,shard,warehouse,shard,0.5531,916764\nbatch,warehouse,warehouse,warehouse,0.0674,438839\nbackfill,warehouse,shard,batch,0.8184,126947\nshard,shard,backfill,backfill,0.7626,855908\nbackfill,backfill,batch,shard,0.1494,545755\nreplica,replica,backfill,shard,0.2194,375884\nwarehouse,replica,backfill,backfill,0.6642,119318\nwarehouse,warehouse,batch,warehouse,0.9796,593810\nreplica,warehouse,shard,batch,0.0174,834605\nbackfill,replica,backfill,warehouse,0.8456,85306\nshard,batch,backfill,shard,0.6204,860303\nbackfill,backfill,replica,backfill,0.6938,84633\nbatch,warehouse,replica,batch,0.2284,858703\nbatch,replica,backfill,batch,0.1982,802468\nreplica,warehouse,shard,backfill,0.3262,334490\nbackfill,batch,replica,shard,0.3435,251946\nbatch,backfill,backfill,backfill,0.3808,74901\nshard,replica,shard,replica,0.0535,275873\nreplica,replica,shard,replica,0.1157,829099\nshard,backfill,backfill,batch,0.1802,689871\nreplica,batch,replica,shard,0.5958,618418\nwarehouse,shard,batch,backfill,0.7480,73047\nbackfill,batch,warehouse,warehouse,0.3477,350078\nshard,shard,backfill,batch,0.0937,852852\nwarehouse,replica,warehouse,replica,0.1354,263112\nshard,batch,batch,backfill,0.6013,480008\nwarehouse,batch,replica,backfill,0.4454,490232\nwarehouse,warehouse,backfill,shard,0.8829,866243\nbackfill,shard,batch,warehouse,0.6079,601865\nshard,shard,batch,backfill,0.5903,502975\nwarehouse,warehouse,batch,replica,0.9524,641707\nshard,warehouse,batch,backfill,0.3860,476123\nbackfill,replica,batch,batch,0.8177,83137\nshard,shard,shard,replica,0.4366,841092\nreplica,warehouse,warehouse,warehouse,0.8385,925994\nreplica,replica,backfill,shard,0.5508,335611\nbatch,backfill,warehouse,batch,0.7765,146300\nwarehouse,replica,batch,warehouse,0.9446,325530\nreplica,replica,replica,backfill,0.7629,255580\nbackfill,shard,replica,backfill,0.5402,938736\nshard,replica,replica,batch,0.9427,289492\nreplica,batch,replica,warehouse,0.3860,518036\nbackfill,backfill,backfill,batch,0.1017,398568\nbatch,warehouse,shard,shard,0.7288,948282\nreplica,warehouse,backfill,warehouse,0.4868,702496\nbatch,shard,backfill,warehouse,0.0229,576641\nwarehouse,batch,replica,warehouse,0.7510,914295\nreplica,replica,warehouse,batch,0.4426,918557\nreplica,shard,batch,shard,0.9194,820439\nshard,batch,shard,backfill,0.5684,303083\nreplica,shard,warehouse,warehouse,0.2609,777102\nbackfill,warehouse,shard,replica,0.6180,490667\nwarehouse,shard,backfill,shard,0.5182,875042\nwarehouse,warehouse,batch,replica,0.5424,719982\nreplica,batch,warehouse,replica,0.5777,327594\nbatch,shard,batch,replica,0.2052,969348\nshard,backfill,backfill,batch,0.5050,602889\nbackfill,warehouse,replica,backfill,0.1092,46297\nbackfill,batch,shard,batch,0.5315,565652\nshard,replica,shard,replica,0.9402,583755\nbackfill,replica,batch,shard,0.1322,111974\nwarehouse,backfill,batch,batch,0.8906,547576\nreplica,warehouse,replica,shard,0.4781,367310\nbackfill,batch,warehouse,backfill,0.4690,646193\nwarehouse,shard,replica,batch,0.7580,420795\nbackfill,batch,shard,warehouse,0.7104,589048\nshard,warehouse,shard,shard,0.0846,382964\nbatch,backfill,batch,backfill,0.9945,891975\nshard,shard,warehouse,shard,0.1522,989343\nshard,warehouse,replica,batch,0.1195,877547\nshard,batch,shard,batch,0.5307,374852\nshard,warehouse,shard,batch,0.2331,897000\nreplica,backfill,warehouse,backfill,0.8823,465348\nreplica,shard,replica,shard,0.1417,853107\nshard,warehouse,batch,warehouse,0.9717,645397\nwarehouse,shard,shard,batch,0.0596,521037\nbackfill,shard,backfill,shard,0.4751,281837\nbackfill,backfill,warehouse,shard,0.5711,962901\nwarehouse,batch,backfill,backfill,0.5698,350584\nbackfill,backfill,backfill,batch,0.8948,192926\nwarehouse,warehouse,batch,replica,0.9047,939597\nwarehouse,warehouse,backfill,shard,0.1687,372896\nshard,batch,warehouse,replica,0.1054,429581\nwarehouse,batch,warehouse,batch,0.8740,308635\nreplica,replica,batch,backfill,0.6898,864133\nshard,batch,replica,warehouse,0.8725,978430\nwarehouse,batch,warehouse,batch,0.8155,744719\nbackfill,shard,shard,replica,0.5209,904097\nbackfill,batch,backfill,batch,0.1344,109886\nwarehouse,warehouse,backfill,replica,0.2930,72955\nbackfill,shard,warehouse,replica,0.1699,955894\nreplica,replica,replica,batch,0.5147,883056\nreplica,replica,shard,batch,0.5985,205785\nreplica,shard,backfill,batch,0.7439,331945\nwarehouse,backfill,backfill,warehouse,0.8901,842566\nbackfill,replica,backfill,replica,0.9211,320245\nwarehouse,shard,batch,shard,0.4980,28553\nshard,backfill,warehouse,backfill,0.8961,657893\nbatch,replica,replica,batch,0.9167,472737\nreplica,batch,batch,batch,0.3618,279975\nwarehouse,shard,warehouse,backfill,0.9842,569640\nshard,batch,backfill,backfill,0.3921,308490\nwarehouse,replica,replica,backfill,0.2188,476539\nwarehouse,batch,warehouse,warehouse,0.1821,606656\nreplica,warehouse,batch,warehouse,0.1526,764885\nwarehouse,batch,replica,warehouse,0.4889,554243\nbackfill,warehouse,backfill,warehouse,0.2103,342771\nbackfill,backfill,backfill,backfill,0.4508,224057\nshard,batch,warehouse,batch,0.4390,570904\nbatch,replica,batch,batch,0.2156,551476\nreplica,batch,warehouse,shard,0.4835,810280\nreplica,batch,replica,replica,0.4752,638911\nshard,batch,warehouse,backfill,0.1155,723217\nshard,replica,backfill,replica,0.5851,998103\nwarehouse,replica,backfill,backfill,0.0379,469557\nwarehouse,warehouse,batch,warehouse,0.8786,598025\nbatch,backfill,shard,warehouse,0.8514,124377\nreplica,batch,shard,shard,0.1102,289297\nbatch,shard,warehouse,batch,0.8776,441599\nshard,replica,batch,batch,0.4190,312034\nbatch,batch,replica,batch,0.6115,483062\nshard,replica,warehouse,warehouse,0.7449,513177\nshard,backfill,batch,shard,0.3281,326317\nbatch,warehouse,backfill,replica,0.4687,482564\nshard,warehouse,replica,batch,0.1074,228644\nbackfill,warehouse,batch,backfill,0.4560,905163\nshard,backfill,shard,batch,0.0096,251809\nbackfill,shard,backfill,replica,0.7289,908720\nbatch,batch,shard,batch,0.6679,91153\nshard,replica,shard,batch,0.8417,484390\nwarehouse,warehouse,batch,backfill,0.2050,798391\nshard,replica,backfill,replica,0.1422,503570\nshard,backfill,backfill,backfill,0.1776,692906\nreplica,warehouse,warehouse,backfill,0.5263,520604\nwarehouse,shard,batch,backfill,0.3391,458842\nwarehouse,shard,warehouse,backfill,0.8630,195469\nbatch,backfill,batch,backfill,0.6211,688514\nbatch,backfill,replica,batch,0.3984,583438\nwarehouse,batch,shard,replica,0.8429,316655\nbatch,batch,warehouse,shard,0.1945,47286\nbackfill,warehouse,batch,warehouse,0.4126,997702\nbatch,warehouse,replica,batch,0.2161,139928\nshard,replica,backfill,shard,0.8797,391429\nbackfill,backfill,shard,backfill,0.1736,376678\nreplica,warehouse,shard,shard,0.8646,583659\nshard,shard,backfill,backfill,0.4632,425268\nreplica,batch,warehouse,batch,0.4167,483536\nwarehouse,batch,replica,warehouse,0.2368,79977\nreplica,backfill,warehouse,replica,0.2881,739849\nwarehouse,shard,backfill,batch,0.3356,677443\nwarehouse,batch,warehouse,replica,0.3749,126167\nbatch,replica,shard,shard,0.4101,625277\nshard,batch,shard,batch,0.6000,303380\nbackfill,replica,batch,batch,0.4283,268355\nbackfill,shard,batch,warehouse,0.4185,156542\nbatch,batch,batch,replica,0.7578,368607\nshard,warehouse,batch,shard,0.6159,354273\nbatch,shard,batch,shard,0.8738,167317\nreplica,batch,backfill,batch,0.5003,574600\nreplica,batch,replica,backfill,0.0796,48625\nbackfill,warehouse,backfill,replica,0.6908,702364\nwarehouse,backfill,warehouse,replica,0.2352,558148\nreplica,shard,shard,backfill,0.8525,361431\nwarehouse,backfill,batch,warehouse,0.7911,84969\nreplica,shard,shard,backfill,0.7220,144096\nshard,batch,replica,batch,0.5558,167467\nbatch,replica,replica,replica,0.3174,403514\nbackfill,replica,replica,warehouse,0.5297,368743\nbatch,batch,shard,replica,0.6432,942982\nreplica,warehouse,backfill,backfill,0.3296,97605\nbackfill,batch,backfill,replica,0.6021,689176\nbackfill,replica,batch,replica,0.7163,533399\nshard,backfill,batch,warehouse,0.1272,283370\nbackfill,batch,backfill,replica,0.0637,813978\nshard,shard,backfill,batch,0.1374,492422\nshard,shard,replica,replica,0.4006,35468\nshard,replica,backfill,replica,0.0843,713130\nshard,batch,replica,warehouse,0.5310,960012\nbatch,batch,warehouse,batch,0.2318,796421\nwarehouse,batch,shard,replica,0.7179,556074\nshard,batch,warehouse,replica,0.0207,143365\nshard,batch,batch,replica,0.5891,289956\nshard,backfill,backfill,warehouse,0.8565,2707\nshard,batch,shard,batch,0.3753,228361\nbackfill,shard,shard,backfill,0.3538,758851\nbackfill,shard,batch,batch,0.5741,760622\nshard,warehouse,backfill,warehouse,0.4131,549068\nshard,warehouse,replica,warehouse,0.4439,146722\nshard,batch,shard,replica,0.8471,669083\nwarehouse,batch,batch,replica,0.2826,438208\nshard,backfill,shard,shard,0.2570,507075\nshard,backfill,shard,replica,0.8952,974894\nwarehouse,backfill,backfill,batch,0.8951,337993\nbatch,replica,warehouse,batch,0.2995,509946\nshard,backfill,backfill,backfill,0.9399,868712\nreplica,replica,warehouse,warehouse,0.0213,955350\nreplica,replica,warehouse,batch,0.4610,38190\nwarehouse,replica,warehouse,batch,0.9157,49950\nbatch,backfill,backfill,backfill,0.2632,169718\nbackfill,warehouse,shard,shard,0.8802,945080\nbackfill,replica,shard,shard,0.2394,481778\nshard,backfill,replica,batch,0.8289,516706\nwarehouse,replica,backfill,warehouse,0.4314,235645\nreplica,batch,warehouse,warehouse,0.5741,388386\nwarehouse,batch,batch,batch,0.0776,548574\nwarehouse,warehouse,replica,backfill,0.3277,440860\nshard,backfill,backfill,shard,0.3480,291706\nbackfill,warehouse,backfill,replica,0.2549,455390\nshard,replica,warehouse,backfill,0.9426,434448\nshard,backfill,replica,shard,0.2021,122325\nbatch,warehouse,batch,backfill,0.3842,359070\nwarehouse,shard,warehouse,replica,0.6437,736844\nreplica,shard,batch,shard,0.1177,155392\nreplica,batch,warehouse,replica,0.4011,115399\nreplica,batch,batch,warehouse,0.0111,362306\nreplica,shard,warehouse,backfill,0.9477,427177\nshard,batch,replica,warehouse,0.4911,148688\nwarehouse,replica,batch,batch,0.2412,387245\nbackfill,warehouse,batch,backfill,0.7660,951654\nbackfill,replica,replica,backfill,0.8553,961226\nshard,replica,replica,warehouse,0.9242,287760\nshard,shard,replica,batch,0.9445,834402\nreplica,warehouse,backfill,batch,0.4475,62268\nshard,batch,warehouse,warehouse,0.9665,969526\nwarehouse,backfill,warehouse,warehouse,0.1344,113905\nbackfill,warehouse,backfill,batch,0.3619,535512\nwarehouse,warehouse,backfill,batch,0.5184,684125\nshard,replica,replica,batch,0.1830,101513\nshard,batch,batch,shard,0.2727,127052\nbackfill,replica,warehouse,backfill,0.6109,40634\nbatch,replica,replica,backfill,0.7952,434208\nreplica,replica,shard,backfill,0.5734,972923\nbackfill,batch,backfill,backfill,0.4588,919630\nwarehouse,backfill,batch,replica,0.4618,39868\nreplica,backfill,backfill,batch,0.4285,519661\nshard,replica,batch,batch,0.6167,910445\nbackfill,replica,shard,warehouse,0.3115,685365\nreplica,replica,warehouse,replica,0.9458,630487\nreplica,warehouse,warehouse,backfill,0.6109,729579\nreplica,shard,batch,backfill,0.9193,784538\nbackfill,shard,warehouse,backfill,0.6097,549276\nbatch,batch,replica,shard,0.7873,469857\nbackfill,backfill,replica,batch,0.8474,570629\nwarehouse,replica,batch,batch,0.8350,381357\nwarehouse,batch,shard,warehouse,0.0459,112227\nwarehouse,shard,batch,warehouse,0.8250,380415\nbackfill,replica,backfill,batch,0.3537,379934\nbackfill,replica,warehouse,backfill,0.7966,331481\nwarehouse,replica,replica,shard,0.9009,736911\nbackfill,shard,batch,backfill,0.8000,936866\nbackfill,backfill,shard,warehouse,0.1070,520137\nbackfill,batch,shard,shard,0.3839,105845\nbackfill,backfill,backfill,backfill,0.7848,964070\nshard,shard,shard,shard,0.2269,7141\nreplica,replica,shard,batch,0.0420,937521\nbackfill,replica,replica,backfill,0.9395,873294\nbatch,batch,replica,warehouse,0.6057,49040\nreplica,shard,warehouse,warehouse,0.1508,234468\nshard,batch,replica,replica,0.4972,554363\nshard,backfill,shard,warehouse,0.4000,638880\nwarehouse,backfill,backfill,shard,0.9311,871243\nshard,replica,replica,warehouse,0.0283,946617\nwarehouse,backfill,warehouse,backfill,0.5919,922465\nwarehouse,replica,batch,shard,0.8201,838348\nbatch,shard,batch,shard,0.2255,994608\nbackfill,shard,backfill,shard,0.4664,503034\nbatch,warehouse,replica,backfill,0.7361,348732\nshard,shard,warehouse,batch,0.3351,650075\nbackfill,replica,warehouse,warehouse,0.6957,731571\nwarehouse,shard,backfill,batch,0.4613,127854\nbatch,replica,warehouse,backfill,0.5236,42169\nbackfill,batch,replica,batch,0.9417,515743\nshard,backfill,backfill,backfill,0.1654,2539\nbatch,backfill,replica,batch,0.3294,874784\nwarehouse,batch,backfill,batch,0.2759,730789\nshard,backfill,warehouse,shard,0.0007,79200\nbatch,backfill,batch,batch,0.2839,740288\nreplica,replica,backfill,replica,0.8976,807338\nbackfill,warehouse,shard,backfill,0.7909,81889\nwarehouse,warehouse,replica,backfill,0.8254,252551\nwarehouse,warehouse,replica,replica,0.1901,863764\nwarehouse,batch,replica,backfill,0.1211,971501\nbackfill,replica,backfill,shard,0.8462,834296\nbackfill,shard,warehouse,shard,0.8711,594884\nwarehouse,replica,shard,replica,0.7927,46518\nreplica,batch,replica,shard,0.5923,820427\nbatch,batch,warehouse,warehouse,0.3641,708802\nwarehouse,backfill,backfill,warehouse,0.3135,61400\nshard,backfill,backfill,replica,0.9830,791033\nreplica,shard,batch,batch,0.4737,474757\nreplica,warehouse,replica,batch,0.3741,802933\nshard,backfill,warehouse,warehouse,0.6798,226012\nreplica,replica,batch,backfill,0.9769,417460\nwarehouse,warehouse,replica,backfill,0.3681,34372\nwarehouse,backfill,shard,warehouse,0.0136,560543\nshard,replica,warehouse,warehouse,0.4970,351649\nwarehouse,warehouse,shard,backfill,0.6342,574058\nwarehouse,batch,replica,warehouse,0.3775,915912\nbackfill,backfill,replica,shard,0.2498,534474\nshard,batch,shard,shard,0.8236,622359\nreplica,shard,warehouse,backfill,0.0489,614406\nreplica,shard,replica,backfill,0.5444,258530\nbackfill,shard,shard,backfill,0.7130,322387\nbackfill,replica,replica,shard,0.7842,444878\nbackfill,batch,shard,shard,0.4746,171323\nshard,warehouse,replica,warehouse,0.6835,677969\nshard,backfill,replica,backfill,0.8628,845581\nwarehouse,backfill,warehouse,shard,0.1225,767420\nshard,replica,shard,shard,0.9484,934530\nreplica,replica,warehouse,batch,0.7436,776862\nwarehouse,backfill,backfill,shard,0.1506,582583\nbatch,warehouse,batch,warehouse,0.1848,383474\nwarehouse,warehouse,replica,replica,0.7425,232903\nreplica,batch,shard,warehouse,0.8802,758385\nbackfill,backfill,batch,batch,0.0843,372350\nreplica,backfill,warehouse,batch,0.6533,842774\nbatch,shard,backfill,shard,0.1945,423514\nbackfill,warehouse,batch,batch,0.0211,934752\nwarehouse,backfill,shard,replica,0.6499,963626\nreplica,shard,shard,replica,0.7616,430868\nbackfill,warehouse,replica,replica,0.7356,574898\nwarehouse,batch,batch,batch,0.8255,881510\nshard,shard,replica,batch,0.1450,691128\nreplica,replica,replica,backfill,0.9475,289522\nwarehouse,warehouse,backfill,warehouse,0.5871,389979\nshard,warehouse,warehouse,batch,0.1367,369082\nbackfill,backfill,backfill,backfill,0.6104,504213\nbatch,shard,shard,warehouse,0.2443,604142\nreplica,replica,replica,warehouse,0.9954,301832\nbackfill,shard,batch,warehouse,0.2239,336318\nwarehouse,batch,shard,backfill,0.7081,679731\nwarehouse,replica,shard,backfill,0.4021,54598\nwarehouse,replica,shard,shard,0.9272,493982\nreplica,batch,warehouse,backfill,0.0370,97766\nreplica,backfill,batch,batch,0.0642,689294\nshard,shard,batch,replica,0.2580,547166\nreplica,replica,replica,batch,0.6205,460735\nbackfill,backfill,shard,replica,0.4981,337058\nbatch,shard,backfill,batch,0.7229,34185\nbatch,replica,shard,replica,0.8964,209676\nwarehouse,replica,backfill,batch,0.0884,427056\nbackfill,shard,shard,backfill,0.4478,494192\nreplica,backfill,backfill,backfill,0.8167,809557\nreplica,batch,warehouse,backfill,0.4294,694061\nshard,warehouse,warehouse,warehouse,0.7719,327110\nbackfill,shard,warehouse,replica,0.6682,628476\nreplica,shard,warehouse,batch,0.8335,585855\nwarehouse,shard,batch,batch,0.4427,333653\nwarehouse,backfill,warehouse,shard,0.6865,568677\nbatch,backfill,batch,warehouse,0.0611,219664\nreplica,replica,shard,warehouse,0.3778,665437\nwarehouse,backfill,batch,warehouse,0.2682,797904\nreplica,batch,backfill,backfill,0.1444,819726\nbackfill,replica,backfill,shard,0.9279,280304\nwarehouse,batch,backfill,replica,0.1768,293885\nwarehouse,batch,backfill,shard,0.1820,177100\nreplica,replica,warehouse,backfill,0.2063,230373\nbatch,shard,shard,replica,0.7290,647132\nbackfill,batch,shard,warehouse,0.5244,741856\nbatch,batch,backfill,shard,0.5191,178346\nshard,replica,backfill,shard,0.5505,802986\nshard,backfill,replica,warehouse,0.3164,470143\nwarehouse,replica,warehouse,backfill,0.2504,522602\nbatch,batch,replica,replica,0.6272,127611\nbatch,backfill,shard,replica,0.9193,774624\nbackfill,batch,warehouse,backfill,0.3729,507791\nbackfill,replica,shard,shard,0.0067,603541\nbatch,warehouse,batch,replica,0.2374,154368\nshard,warehouse,backfill,warehouse,0.8772,81256\nshard,replica,backfill,backfill,0.3239,570144\nwarehouse,shard,backfill,shard,0.6645,896323\nbackfill,replica,backfill,backfill,0.6969,534405\nreplica,batch,batch,shard,0.0394,339862\nreplica,batch,backfill,warehouse,0.6387,349720\nbatch,replica,batch,backfill,0.3260,753792\nreplica,replica,backfill,warehouse,0.0939,231010\nbatch,shard,shard,warehouse,0.5861,296413\nbatch,shard,warehouse,batch,0.9905,560040\nbackfill,backfill,warehouse,warehouse,0.0415,979652\nwarehouse,warehouse,replica,backfill,0.2617,953293\nreplica,shard,replica,replica,0.2768,828805\nwarehouse,backfill,backfill,warehouse,0.9378,809886\nwarehouse,warehouse,warehouse,warehouse,0.2017,88426\nbackfill,warehouse,replica,batch,0.6576,578410\nbackfill,batch,batch,replica,0.9152,312489\nshard,replica,warehouse,shard,0.9109,233378\nbackfill,replica,batch,backfill,0.3204,658844\nreplica,warehouse,warehouse,warehouse,0.0217,148825\nbackfill,backfill,batch,warehouse,0.1609,820777\nbackfill,batch,replica,replica,0.6727,615328\nbatch,shard,shard,replica,0.4468,348892\nwarehouse,batch,warehouse,replica,0.1936,494135\nwarehouse,replica,warehouse,backfill,0.2841,101622\nshard,replica,warehouse,backfill,0.9394,178508\nshard,backfill,backfill,shard,0.9442,124341\nwarehouse,warehouse,warehouse,shard,0.1427,430105\nbatch,replica,replica,batch,0.9019,440923\nbatch,batch,replica,backfill,0.1421,552651\nreplica,shard,batch,batch,0.3969,605183\nbackfill,batch,shard,backfill,0.2299,398734\nreplica,shard,warehouse,backfill,0.2176,212695\nbatch,warehouse,batch,warehouse,0.1698,862095\nshard,backfill,shard,replica,0.7962,855132\nbatch,warehouse,shard,warehouse,0.1790,655886\nbackfill,backfill,replica,replica,0.2122,830716\nshard,backfill,batch,warehouse,0.0228,129541\nshard,replica,batch,batch,0.6401,807787\nshard,backfill,batch,warehouse,0.6856,771097\nreplica,batch,replica,warehouse,0.4684,650454\nbatch,batch,shard,warehouse,0.0328,210303\nbackfill,backfill,shard,warehouse,0.3671,400080\nreplica,shard,warehouse,shard,0.4763,720972\nbatch,replica,shard,batch,0.2073,721806\nshard,warehouse,warehouse,backfill,0.3908,638579\nshard,batch,warehouse,warehouse,0.1042,345817\nbatch,warehouse,backfill,warehouse,0.5440,257734\nbatch,shard,backfill,shard,0.0352,558386\nbackfill,shard,replica,backfill,0.1263,532142\nbatch,warehouse,shard,warehouse,0.0405,273202\nshard,backfill,backfill,replica,0.9440,401070\nbatch,backfill,replica,replica,0.1279,987103\nbackfill,replica,batch,backfill,0.2139,127996\nbatch,warehouse,replica,replica,0.0269,717653\nshard,backfill,warehouse,backfill,0.1812,407443\nwarehouse,batch,shard,replica,0.3377,285253\nbackfill,shard,batch,backfill,0.6064,668090\nwarehouse,shard,batch,warehouse,0.1120,362475\nshard,batch,shard,backfill,0.6377,919148\nwarehouse,warehouse,replica,warehouse,0.5705,813053\nshard,batch,replica,replica,0.6078,620248\nbatch,shard,shard,backfill,0.0056,929073\nbackfill,backfill,warehouse,shard,0.9522,92191\nbackfill,batch,shard,replica,0.3670,448675\nshard,replica,batch,backfill,0.0733,222840\nbatch,warehouse,shard,replica,0.5663,574730\nreplica,batch,shard,warehouse,0.7741,833679\nbatch,shard,shard,backfill,0.0555,325452\nreplica,shard,replica,backfill,0.3044,109147\nshard,batch,backfill,backfill,0.1077,988004\nshard,batch,warehouse,warehouse,0.7527,354961\nshard,replica,backfill,replica,0.0104,102656\nwarehouse,replica,warehouse,replica,0.4499,414340\nreplica,shard,replica,warehouse,0.5469,739444\nreplica,warehouse,batch,backfill,0.2908,464002\nwarehouse,batch,shard,batch,0.3256,438754\nreplica,warehouse,warehouse,shard,0.2711,396508\nbackfill,warehouse,backfill,warehouse,0.1082,355519\nshard,backfill,backfill,shard,0.4411,88521\nbackfill,backfill,warehouse,warehouse,0.6402,776185\nshard,shard,batch,replica,0.0738,354525\nbatch,batch,shard,replica,0.3258,602411\nreplica,shard,backfill,replica,0.5715,46711\nwarehouse,shard,shard,shard,0.5395,81945\nbatch,replica,batch,shard,0.7799,508868\nreplica,backfill,batch,batch,0.2466,380453\nshard,batch,shard,shard,0.2129,203973\nreplica,batch,backfill,warehouse,0.9377,308924\nwarehouse,warehouse,warehouse,warehouse,0.3074,196912\nwarehouse,warehouse,warehouse,shard,0.6952,792862\nbatch,shard,shard,warehouse,0.2869,20074\nbatch,shard,warehouse,batch,0.8428,206577\nbatch,shard,batch,replica,0.5262,701192\nshard,batch,replica,shard,0.0485,995062\nreplica,batch,backfill,backfill,0.2252,461469\nbatch,backfill,shard,backfill,0.5611,562010\nreplica,shard,backfill,batch,0.6434,125668\nreplica,shard,replica,warehouse,0.6070,51789\nbatch,replica,backfill,batch,0.3466,265060\nbatch,warehouse,backfill,backfill,0.7792,45634\nreplica,replica,warehouse,backfill,0.9855,234011\nbatch,shard,batch,replica,0.5023,55504\nbackfill,shard,shard,batch,0.3272,485917\nshard,replica,batch,batch,0.5790,124987\nbatch,replica,replica,replica,0.2309,991142\nbatch,batch,warehouse,batch,0.1042,471923\nbackfill,shard,backfill,replica,0.5310,840058\nshard,warehouse,replica,batch,0.3679,773210\nreplica,shard,replica,batch,0.7437,519743\nbatch,backfill,backfill,warehouse,0.3710,807378\nbackfill,warehouse,replica,warehouse,0.7726,336400\nbackfill,warehouse,shard,shard,0.1749,754022\nwarehouse,warehouse,shard,batch,0.7941,148506\nreplica,batch,shard,shard,0.8487,763326\nreplica,replica,batch,backfill,0.3037,276853\nbatch,replica,backfill,shard,0.8499,722691\nwarehouse,batch,warehouse,batch,0.7571,421398\nbatch,warehouse,backfill,shard,0.5698,862557\nbatch,batch,warehouse,batch,0.0613,720392\nwarehouse,batch,replica,replica,0.3862,985351\nwarehouse,replica,batch,replica,0.5786,513913\nwarehouse,backfill,batch,warehouse,0.4436,942080\nshard,shard,batch,batch,0.9268,3814\nbackfill,warehouse,batch,warehouse,0.0434,936158\nwarehouse,backfill,warehouse,replica,0.4011,302876\nwarehouse,replica,batch,shard,0.1843,856992\nbatch,shard,shard,warehouse,0.5862,961786\nshard,warehouse,backfill,backfill,0.0710,202949\nbatch,backfill,batch,backfill,0.8458,633016\nshard,shard,batch,replica,0.2247,589109\nbackfill,batch,backfill,warehouse,0.2719,814348\nshard,batch,shard,backfill,0.0048,377997\nwarehouse,warehouse,shard,backfill,0.0844,501747\nshard,shard,batch,warehouse,0.9825,181059\nshard,backfill,replica,warehouse,0.8132,604907\nshard,backfill,shard,replica,0.9081,192046\nbackfill,batch,batch,warehouse,0.0554,991629\nbackfill,shard,batch,replica,0.5968,362815\nshard,backfill,backfill,batch,0.4230,148691\nreplica,batch,shard,replica,0.2667,138767\nshard,batch,batch,backfill,0.3513,530287\nbackfill,backfill,batch,shard,0.8594,800050\nwarehouse,shard,batch,warehouse,0.6824,695896\nbatch,batch,shard,replica,0.7182,696007\nwarehouse,shard,backfill,backfill,0.3048,744395\nreplica,backfill,shard,shard,0.9425,322215\nwarehouse,shard,backfill,backfill,0.9219,474981\nbatch,replica,shard,warehouse,0.8138,513173\nbackfill,shard,replica,replica,0.1707,390303\nreplica,batch,replica,shard,0.2276,854519\nshard,replica,warehouse,warehouse,0.4781,127757\nshard,backfill,batch,warehouse,0.8876,483150\nreplica,warehouse,batch,shard,0.7964,149210\nbatch,warehouse,replica,warehouse,0.5095,290426\nreplica,backfill,batch,warehouse,0.9747,743532\nreplica,batch,warehouse,warehouse,0.3365,444109\nreplica,shard,replica,batch,0.6051,133172\nbatch,batch,replica,replica,0.6365,632117\nwarehouse,backfill,warehouse,batch,0.4668,61717\nshard,warehouse,replica,replica,0.7661,618779\nshard,warehouse,shard,shard,0.0121,151900\nshard,backfill,backfill,batch,0.1248,661084\nshard,shard,replica,shard,0.2583,35423\nbatch,batch,warehouse,warehouse,0.4801,421085\nbackfill,warehouse,batch,replica,0.5149,615107\nreplica,batch,warehouse,replica,0.2279,107246\nwarehouse,batch,replica,backfill,0.6262,359955\nbackfill,batch,backfill,warehouse,0.7709,738964\nbackfill,shard,batch,shard,0.0299,501811\nreplica,shard,batch,replica,0.3101,744283\nbatch,warehouse,warehouse,warehouse,0.4059,888769\nbackfill,shard,backfill,batch,0.5445,618631\nbatch,shard,replica,backfill,0.3772,195941\nbatch,batch,backfill,replica,0.3439,581401\nbackfill,replica,replica,warehouse,0.8806,475814\nbatch,shard,replica,replica,0.8509,189195\nwarehouse,replica,shard,batch,0.6315,758708\nwarehouse,shard,batch,replica,0.2985,290768\nwarehouse,batch,backfill,replica,0.3304,943973\nreplica,warehouse,shard,replica,0.1037,783583\nbatch,batch,batch,backfill,0.9140,793856\nbatch,shard,replica,replica,0.1945,927119\nbackfill,replica,backfill,batch,0.0783,186559\nwarehouse,shard,warehouse,backfill,0.1956,725727\n# WARNING shard 07 peaked at a duplicate_rate of 0.0413 (batch_2026_02_14_07, replica reader)\nshard,shard,warehouse,batch,0.9858,774486\nreplica,batch,warehouse,backfill,0.1278,395523\nshard,backfill,backfill,warehouse,0.6514,410587\nbatch,replica,warehouse,warehouse,0.0016,11448\nbackfill,batch,backfill,shard,0.3131,320666\nbackfill,warehouse,batch,backfill,0.5616,57239\nbackfill,backfill,replica,batch,0.3539,156781\nbatch,replica,shard,replica,0.5555,353200\nbackfill,shard,warehouse,backfill,0.4632,934247\nbatch,replica,backfill,warehouse,0.6146,686488\nreplica,batch,batch,batch,0.7934,400318\nbatch,batch,backfill,warehouse,0.5323,138515\nwarehouse,replica,replica,batch,0.3664,107642\nbackfill,batch,backfill,batch,0.1778,962138\n07,batch_2026_02_14_07,499812,498233,0.0413,9412\nbackfill,warehouse,shard,replica,0.8362,500633\nreplica,warehouse,backfill,warehouse,0.7884,606821\nshard,replica,replica,backfill,0.3657,120410\nshard,batch,backfill,replica,0.0038,996590\nreplica,batch,batch,replica,0.4411,812837\nbackfill,shard,warehouse,backfill,0.3700,981066\nshard,replica,warehouse,shard,0.6279,454640\nreplica,shard,shard,warehouse,0.2400,321865\nbackfill,batch,replica,replica,0.1399,482212\nbatch,batch,shard,backfill,0.0281,37544\nbatch,replica,backfill,warehouse,0.8798,560920\nbatch,shard,replica,shard,0.5031,652376\nbatch,replica,warehouse,batch,0.8027,731410\nshard,shard,warehouse,batch,0.6230,606330\nshard,batch,replica,warehouse,0.8936,583523\nreplica,warehouse,batch,shard,0.2960,68382\nreplica,shard,shard,warehouse,0.4261,392363\nreplica,replica,backfill,backfill,0.7628,720913\nreplica,shard,replica,backfill,0.7116,408179\nshard,shard,batch,batch,0.4966,625705\nwarehouse,warehouse,backfill,backfill,0.5870,411785\nbatch,batch,replica,batch,0.8335,692068\nreplica,backfill,backfill,batch,0.9088,483270\nreplica,backfill,batch,batch,0.1342,201154\nshard,warehouse,warehouse,batch,0.7442,259548\nwarehouse,warehouse,warehouse,backfill,0.3103,776878\nbatch,backfill,batch,replica,0.6951,480285\nbackfill,shard,batch,warehouse,0.0530,559542\nbackfill,backfill,backfill,backfill,0.7850,16110\nwarehouse,backfill,backfill,warehouse,0.5651,233238\nshard,shard,batch,replica,0.9359,175712\nbackfill,replica,shard,backfill,0.4366,551860\nbackfill,backfill,backfill,backfill,0.3721,626324\nreplica,shard,warehouse,warehouse,0.1419,370696\nbatch,shard,backfill,shard,0.3136,364457\nshard,batch,backfill,batch,0.3844,549323\nwarehouse,shard,warehouse,warehouse,0.3335,753481\nshard,warehouse,replica,batch,0.1105,343141\nshard,batch,shard,shard,0.6951,194456\nbatch,backfill,batch,warehouse,0.8247,832110\nwarehouse,warehouse,shard,batch,0.8266,314349\nbackfill,replica,warehouse,shard,0.6287,86568\nshard,warehouse,replica,shard,0.3100,624152\nbackfill,batch,batch,shard,0.4608,437437\nshard,replica,shard,batch,0.1263,504293\nshard,warehouse,batch,replica,0.7788,797235\nshard,replica,replica,replica,0.0451,654132\nbackfill,replica,batch,replica,0.1599,751992\nbackfill,backfill,backfill,shard,0.4423,656355\nbackfill,warehouse,backfill,replica,0.6272,485131\nreplica,backfill,shard,shard,0.8634,658579\nshard,replica,warehouse,backfill,0.7927,349910\nshard,backfill,warehouse,shard,0.8460,690201\nbackfill,warehouse,shard,warehouse,0.3564,173050\nbatch,batch,replica,replica,0.9021,784037\nshard,shard,replica,backfill,0.4255,363038\nbatch,warehouse,warehouse,warehouse,0.9516,756778\nbatch,warehouse,warehouse,backfill,0.8777,701150\nwarehouse,warehouse,backfill,warehouse,0.9910,833465\nbatch,backfill,backfill,warehouse,0.8887,30518\nreplica,replica,warehouse,batch,0.8724,392094\nreplica,warehouse,shard,replica,0.9296,429490\nbackfill,replica,warehouse,backfill,0.8828,997675\nbatch,batch,warehouse,backfill,0.9225,189758\nreplica,backfill,backfill,backfill,0.0249,901514\nshard,backfill,replica,warehouse,0.9952,92058\nbatch,shard,backfill,batch,0.5597,438530\nwarehouse,backfill,shard,batch,0.1667,224562\nwarehouse,backfill,batch,replica,0.6364,393935\nreplica,replica,shard,batch,0.2422,442750\nbatch,replica,batch,batch,0.9399,710650\nbatch,shard,replica,warehouse,0.9827,46704\nwarehouse,backfill,backfill,batch,0.5469,571824\nbatch,warehouse,replica,backfill,0.6999,177749\nbatch,batch,replica,batch,0.8200,873573\nreplica,shard,batch,shard,0.6781,688429\nshard,warehouse,warehouse,shard,0.0823,935171\nshard,batch,shard,warehouse,0.8970,916721\nbatch,replica,warehouse,shard,0.7476,190104\nbatch,warehouse,batch,replica,0.4179,183494\nreplica,batch,replica,backfill,0.7010,137365\nwarehouse,backfill,replica,replica,0.3121,383547\nreplica,backfill,replica,backfill,0.9091,130533\nbatch,backfill,shard,backfill,0.9133,720007\nwarehouse,backfill,backfill,batch,0.0299,614440\nbatch,replica,replica,warehouse,0.4937,167294\nbackfill,batch,shard,batch,0.9990,150727\nshard,shard,shard,batch,0.6985,492428\nreplica,backfill,backfill,backfill,0.4126,227755\nbackfill,backfill,replica,replica,0.4380,620363\nbatch,backfill,backfill,replica,0.3067,494335\nreplica,replica,warehouse,warehouse,0.9752,144730\nreplica,shard,replica,backfill,0.4044,175512\nbatch,shard,backfill,backfill,0.2733,645638\nbatch,warehouse,batch,shard,0.9158,506385\nreplica,warehouse,batch,batch,0.5386,499891\nshard,warehouse,shard,shard,0.1561,24921\nshard,warehouse,warehouse,backfill,0.2776,669028\nbatch,warehouse,backfill,shard,0.9372,561961\nbatch,backfill,shard,replica,0.5729,810696\nshard,replica,replica,backfill,0.7731,90180\nreplica,backfill,replica,replica,0.4574,537399\nreplica,batch,batch,replica,0.6383,307668\nbackfill,batch,warehouse,backfill,0.4934,425419\nshard,replica,shard,warehouse,0.0895,857269\nbackfill,batch,batch,replica,0.7200,726126\nbackfill,batch,backfill,batch,0.0165,228689\nbatch,replica,batch,batch,0.5289,652470\nreplica,shard,batch,batch,0.1406,507698\nbackfill,backfill,replica,warehouse,0.6983,783262\nwarehouse,backfill,backfill,backfill,0.6799,699770\nbackfill,batch,replica,warehouse,0.2302,727140\nbackfill,shard,shard,backfill,0.3515,658690\nshard,batch,shard,batch,0.6119,983991\nshard,warehouse,replica,backfill,0.7345,254448\nwarehouse,batch,backfill,shard,0.6103,459635\nbackfill,replica,warehouse,replica,0.0630,459518\nbatch,warehouse,shard,shard,0.7232,865987\nshard,replica,batch,backfill,0.4730,794034\nshard,warehouse,backfill,batch,0.9578,381158\nwarehouse,shard,backfill,replica,0.1424,506954\nwarehouse,warehouse,batch,shard,0.2883,248096\nwarehouse,replica,batch,batch,0.9881,822790\nreplica,replica,batch,shard,0.0702,691650\nbackfill,backfill,shard,shard,0.7974,439495\nbatch,batch,replica,backfill,0.7649,489525\nbatch,warehouse,batch,shard,0.1583,431659\nreplica,batch,warehouse,batch,0.8792,413706\nwarehouse,backfill,replica,replica,0.5405,995749\nbatch,batch,batch,backfill,0.5034,269138\nbatch,replica,warehouse,batch,0.7393,282553\nshard,shard,shard,shard,0.4174,399017\nwarehouse,backfill,batch,warehouse,0.5621,37397\nwarehouse,shard,shard,backfill,0.1292,363930\nreplica,warehouse,warehouse,replica,0.1341,851480\nbatch,replica,replica,replica,0.4770,963345\nbatch,shard,replica,backfill,0.5659,187337\nbatch,shard,replica,replica,0.0174,907857\nreplica,batch,warehouse,shard,0.8638,68446\nwarehouse,shard,shard,backfill,0.9939,917756\nwarehouse,shard,backfill,shard,0.7992,169827\nshard,replica,shard,warehouse,0.3411,956343\nshard,batch,backfill,backfill,0.8486,756830\nwarehouse,shard,warehouse,warehouse,0.9680,383717\nbackfill,batch,replica,batch,0.7876,66688\nwarehouse,replica,warehouse,backfill,0.4957,612122\nbackfill,shard,replica,warehouse,0.0682,500785\nbatch,shard,batch,warehouse,0.7864,975667\nshard,warehouse,batch,replica,0.9831,309224\nbatch,shard,backfill,backfill,0.0025,158669\nreplica,replica,replica,backfill,0.6581,894486\nshard,backfill,backfill,warehouse,0.0642,408153\nbatch,batch,replica,batch,0.3908,614945\nbackfill,batch,warehouse,replica,0.0189,451308\nbackfill,replica,replica,batch,0.5309,219744\nbackfill,shard,shard,backfill,0.2036,859864\nwarehouse,shard,shard,shard,0.9684,761433\nbatch,batch,warehouse,replica,0.3582,983509\nbatch,replica,shard,batch,0.0762,102973\nwarehouse,warehouse,replica,warehouse,0.5679,582698\nshard,warehouse,batch,backfill,0.6680,551813\nwarehouse,shard,backfill,replica,0.5340,67670\nwarehouse,replica,shard,replica,0.4120,370604\nwarehouse,batch,replica,warehouse,0.7198,539116\nshard,backfill,shard,warehouse,0.8247,762887\nbackfill,backfill,shard,warehouse,0.2415,591504\nbatch,batch,backfill,shard,0.0055,93755\nreplica,batch,batch,warehouse,0.1679,42007\nbatch,shard,backfill,warehouse,0.3338,652922\nbatch,shard,replica,shard,0.2542,926168\nbatch,batch,backfill,backfill,0.6328,538983\nshard,replica,warehouse,shard,0.9132,416608\nbatch,warehouse,batch,batch,0.8520,118028\nshard,batch,warehouse,replica,0.4875,48739\nbackfill,warehouse,batch,batch,0.6413,259283\nbatch,replica,batch,shard,0.8793,895029\nbatch,backfill,warehouse,batch,0.2842,312891\nreplica,warehouse,batch,backfill,0.8218,803865\nreplica,shard,warehouse,batch,0.4777,661598\nbackfill,batch,warehouse,batch,0.5415,799904\nreplica,shard,shard,backfill,0.6143,580218\nreplica,warehouse,backfill,warehouse,0.6696,15141\nbackfill,warehouse,batch,warehouse,0.6142,63055\nreplica,batch,shard,backfill,0.0021,644023\nshard,batch,replica,shard,0.1414,514579\nbackfill,backfill,batch,backfill,0.1973,861253\nshard,backfill,shard,warehouse,0.5595,171081\nshard,warehouse,replica,backfill,0.1759,123096\nshard,replica,warehouse,batch,0.3184,588864\nreplica,batch,batch,replica,0.3187,472218\nbatch,warehouse,shard,backfill,0.0050,266074\nshard,replica,replica,replica,0.5264,363950\nbatch,warehouse,shard,shard,0.8419,864640\nwarehouse,warehouse,batch,warehouse,0.3991,645411\nbatch,warehouse,replica,replica,0.7165,827265\nbackfill,backfill,backfill,shard,0.7310,221232\nwarehouse,batch,warehouse,backfill,0.2496,866566\nshard,warehouse,replica,warehouse,0.4421,806184\nbackfill,batch,backfill,warehouse,0.8054,650461\nwarehouse,warehouse,replica,backfill,0.7666,709777\nbatch,shard,shard,replica,0.5566,116723\nbackfill,warehouse,batch,warehouse,0.8713,507319\nwarehouse,warehouse,batch,batch,0.2555,614284\nshard,warehouse,warehouse,backfill,0.3570,577179\nbatch,backfill,batch,shard,0.0289,100324\nshard,shard,backfill,backfill,0.7096,632428\nreplica,warehouse,batch,batch,0.7265,951286\nshard,shard,replica,shard,0.2075,936472\nreplica,batch,batch,replica,0.1628,803415\nbackfill,batch,batch,warehouse,0.0833,902012\nwarehouse,replica,backfill,replica,0.0113,654148\nshard,backfill,shard,batch,0.4864,355507\nwarehouse,backfill,batch,replica,0.0051,646059\nwarehouse,replica,replica,batch,0.9331,568720\nwarehouse,shard,warehouse,backfill,0.1290,830945\nwarehouse,batch,batch,warehouse,0.9974,559519\nreplica,replica,backfill,replica,0.4715,699704\nwarehouse,backfill,warehouse,replica,0.4409,717227\nwarehouse,batch,batch,backfill,0.9864,550669\nwarehouse,replica,shard,replica,0.0147,831080\nshard,batch,shard,batch,0.8294,560993\nbackfill,warehouse,replica,shard,0.6030,750212\nwarehouse,batch,batch,warehouse,0.6279,947499\nbatch,warehouse,backfill,batch,0.9092,10647\nbatch,warehouse,backfill,backfill,0.2801,189908\nbatch,replica,batch,batch,0.4422,686723\nwarehouse,shard,shard,backfill,0.9506,959561\nbatch,batch,backfill,warehouse,0.3325,180659\nshard,backfill,replica,backfill,0.0470,298734\nshard,batch,batch,batch,0.1271,412738\nshard,shard,warehouse,shard,0.9189,252060\nbatch,shard,shard,backfill,0.5068,659648\nbackfill,warehouse,replica,replica,0.3754,671577\nshard,replica,replica,shard,0.7529,299377\nreplica,backfill,backfill,backfill,0.8593,267822\nshard,replica,batch,batch,0.8898,107755\nreplica,batch,batch,batch,0.4360,517510\nwarehouse,shard,warehouse,batch,0.9356,81539\nreplica,shard,shard,warehouse,0.1313,111786\nshard,warehouse,replica,warehouse,0.9736,322678\nshard,backfill,backfill,shard,0.2156,188548\nreplica,replica,shard,batch,0.9554,625179\nshard,warehouse,replica,warehouse,0.1643,632456\nbatch,warehouse,batch,batch,0.9285,348060\nshard,backfill,warehouse,warehouse,0.6280,548159\nreplica,backfill,shard,warehouse,0.3496,208565\nbatch,replica,batch,shard,0.9769,32625\nreplica,batch,shard,batch,0.9778,672452\nbackfill,warehouse,warehouse,replica,0.2442,54518\nshard,batch,shard,shard,0.2615,842181\nreplica,warehouse,shard,batch,0.4235,627380\nshard,batch,batch,backfill,0.4383,204965\nreplica,replica,backfill,replica,0.3448,35652\nshard,backfill,batch,backfill,0.1605,305609\nbackfill,batch,shard,replica,0.9088,271077\nreplica,batch,backfill,backfill,0.7571,966727\nshard,backfill,warehouse,warehouse,0.8930,909070\nbatch,warehouse,batch,replica,0.7864,402393\nbatch,shard,warehouse,warehouse,0.6513,742316\nshard,replica,warehouse,batch,0.1082,255013\nbatch,warehouse,warehouse,backfill,0.2284,447321\nbackfill,batch,batch,warehouse,0.3124,610264\nshard,warehouse,backfill,backfill,0.0026,744158\nbackfill,replica,shard,shard,0.6410,610116\nshard,batch,batch,warehouse,0.3100,521059\nreplica,warehouse,warehouse,batch,0.8882,143170\nwarehouse,warehouse,shard,batch,0.3505,431537\nwarehouse,shard,batch,backfill,0.0854,777266\nbatch,replica,warehouse,warehouse,0.3586,49997\nshard,replica,backfill,warehouse,0.1715,555344\nshard,batch,backfill,warehouse,0.7855,65018\nbackfill,backfill,warehouse,batch,0.1779,264418\nshard,backfill,batch,backfill,0.0686,749618\nwarehouse,warehouse,shard,shard,0.7125,96663\nreplica,shard,backfill,batch,0.5470,379452\nbackfill,replica,warehouse,replica,0.0036,904208\nwarehouse,warehouse,warehouse,batch,0.1180,775246\nbatch,replica,warehouse,replica,0.6110,843406\nbackfill,batch,backfill,warehouse,0.8256,627942\nbackfill,warehouse,shard,replica,0.0280,481101\nbackfill,replica,backfill,replica,0.7581,287371\nbatch,replica,shard,backfill,0.7977,435996\nbackfill,warehouse,replica,backfill,0.6415,65818\nbackfill,backfill,warehouse,warehouse,0.8785,200003\nreplica,batch,warehouse,warehouse,0.2482,930875\nreplica,shard,backfill,shard,0.8186,894080\nreplica,shard,warehouse,shard,0.1893,434427\nbackfill,shard,batch,replica,0.7169,931305\nwarehouse,replica,replica,warehouse,0.0855,354403\nshard,backfill,shard,warehouse,0.4350,132623\nwarehouse,warehouse,backfill,batch,0.7916,864496\nbackfill,batch,replica,warehouse,0.4981,50582\nwarehouse,backfill,replica,shard,0.7672,424300\nshard,batch,replica,replica,0.2767,787950\nbackfill,shard,batch,warehouse,0.7387,963975\nshard,backfill,backfill,backfill,0.7054,143419\nshard,replica,warehouse,replica,0.4803,569447\nreplica,batch,backfill,batch,0.8184,835330\nshard,shard,shard,warehouse,0.0539,898430\nwarehouse,warehouse,replica,shard,0.2011,128567\nbackfill,batch,backfill,shard,0.3071,405995\nwarehouse,warehouse,replica,batch,0.0819,312601\nwarehouse,batch,shard,shard,0.2054,813677\nwarehouse,backfill,backfill,backfill,0.6614,740778\nwarehouse,warehouse,replica,batch,0.4645,450794\nbatch,replica,backfill,warehouse,0.5169,322531\nwarehouse,shard,backfill,shard,0.2824,737423\nreplica,warehouse,batch,shard,0.1918,782473\nbatch,shard,replica,backfill,0.6435,419481\nreplica,warehouse,shard,batch,0.2923,56581\nreplica,shard,backfill,warehouse,0.5653,499085\nreplica,backfill,warehouse,backfill,0.6429,465887\nreplica,shard,warehouse,batch,0.4771,213246\nreplica,backfill,batch,warehouse,0.6810,742178\nwarehouse,shard,batch,batch,0.0404,640058\nbatch,batch,warehouse,batch,0.2336,487792\nreplica,warehouse,batch,replica,0.7759,24565\nbatch,backfill,batch,shard,0.1648,367191\nreplica,warehouse,backfill,replica,0.7347,344272\nshard,shard,batch,warehouse,0.8425,788897\nreplica,replica,warehouse,replica,0.4804,79093\nbatch,warehouse,warehouse,backfill,0.6711,863837\nbatch,batch,backfill,backfill,0.4664,952962\nwarehouse,warehouse,replica,batch,0.3612,810527\nbatch,replica,replica,warehouse,0.9024,149239\nshard,backfill,backfill,replica,0.8310,17161\nreplica,warehouse,batch,warehouse,0.0012,858487\nreplica,shard,backfill,batch,0.1166,307902\nshard,replica,batch,replica,0.1813,108653\nwarehouse,replica,warehouse,shard,0.9464,770059\nshard,warehouse,shard,backfill,0.6669,155769\nshard,batch,batch,replica,0.1113,605321\nshard,warehouse,shard,replica,0.1490,986477\nshard,batch,shard,shard,0.9991,843556\nreplica,warehouse,batch,backfill,0.3688,965879\nbackfill,warehouse,warehouse,shard,0.0868,98547\nbatch,replica,replica,shard,0.1565,914654\nbackfill,replica,replica,batch,0.8954,932620\nshard,shard,replica,warehouse,0.1504,798954\nshard,backfill,shard,replica,0.6428,304638\nshard,replica,warehouse,backfill,0.0324,680826\nreplica,backfill,replica,shard,0.5624,747371\nreplica,replica,batch,backfill,0.7475,933592\nreplica,backfill,shard,shard,0.9546,897441\nreplica,replica,batch,replica,0.1636,444802\nbatch,backfill,warehouse,replica,0.6029,84604\nwarehouse,shard,warehouse,shard,0.2148,519403\nshard,shard,batch,replica,0.9056,128818\nbatch,shard,shard,warehouse,0.6962,698240\nwarehouse,shard,backfill,warehouse,0.1540,857123\nbatch,replica,batch,backfill,0.9450,91790\nshard,backfill,backfill,batch,0.0004,133487\nreplica,batch,shard,warehouse,0.6502,734573\nshard,warehouse,warehouse,replica,0.5864,116935\nbatch,shard,backfill,replica,0.7082,918077\nbatch,replica,warehouse,warehouse,0.5496,723339\nbackfill,backfill,batch,backfill,0.8505,103987\nbatch,batch,replica,backfill,0.4793,562468\nshard,warehouse,batch,batch,0.3348,543549\nwarehouse,shard,backfill,replica,0.1776,630085\nshard,shard,backfill,warehouse,0.1311,397752\nwarehouse,shard,backfill,batch,0.7016,138184\nwarehouse,warehouse,batch,shard,0.1527,752795\nbatch,batch,replica,replica,0.8056,125840\nreplica,shard,replica,warehouse,0.5752,483811\nbatch,warehouse,shard,warehouse,0.6286,157656\nshard,replica,warehouse,batch,0.9499,865976\nshard,backfill,backfill,shard,0.3810,10786\nbatch,shard,backfill,batch,0.8735,165901\nbackfill,shard,replica,replica,0.9359,818522\nwarehouse,replica,warehouse,backfill,0.1934,799526\nwarehouse,backfill,replica,replica,0.0058,315722\nbackfill,backfill,replica,replica,0.2970,330888\nbackfill,batch,replica,warehouse,0.2058,155703\nwarehouse,warehouse,shard,replica,0.5543,495265\nbackfill,warehouse,batch,replica,0.5320,641654\nshard,warehouse,shard,warehouse,0.4756,650897\nshard,replica,batch,backfill,0.3372,520199\nbatch,warehouse,batch,batch,0.4964,55820\nreplica,backfill,batch,batch,0.2744,580455\nshard,batch,warehouse,replica,0.7907,775628\nbatch,backfill,shard,backfill,0.1476,735685\nbackfill,backfill,replica,batch,0.0389,450512\nbatch,backfill,shard,shard,0.5720,148473\nwarehouse,shard,warehouse,warehouse,0.6933,271658\nreplica,backfill,warehouse,batch,0.2365,356326\nwarehouse,backfill,warehouse,backfill,0.3603,676203\nbackfill,backfill,warehouse,backfill,0.3873,471109\nbatch,backfill,warehouse,backfill,0.3373,386802\nbatch,replica,replica,replica,0.8712,755725\nbackfill,batch,warehouse,replica,0.6475,581043\nbatch,replica,replica,replica,0.3029,102995\nbackfill,backfill,backfill,warehouse,0.9502,409869\nwarehouse,replica,shard,replica,0.7377,393744\nshard,batch,backfill,batch,0.9213,244994\nbatch,shard,batch,warehouse,0.2544,560544\nbackfill,backfill,warehouse,warehouse,0.4671,708656\nbackfill,shard,warehouse,warehouse,0.0730,972277\nwarehouse,backfill,replica,replica,0.4888,387734\nbatch,replica,replica,batch,0.3267,29736\nwarehouse,replica,shard,replica,0.3912,505624\nreplica,batch,backfill,batch,0.7007,349992\nshard,batch,batch,batch,0.3891,206108\nbackfill,batch,backfill,warehouse,0.2110,452804\nshard,warehouse,replica,warehouse,0.1822,965846\nreplica,replica,batch,batch,0.1722,868382\nshard,backfill,warehouse,shard,0.7805,716412\nbackfill,shard,backfill,batch,0.9914,350201\nbackfill,warehouse,replica,shard,0.0616,219331\nwarehouse,shard,replica,shard,0.6826,85762\nshard,backfill,shard,backfill,0.5920,446202\nshard,warehouse,warehouse,warehouse,0.7667,956476\nbackfill,warehouse,shard,warehouse,0.5637,241996\nwarehouse,warehouse,replica,warehouse,0.6655,431219\nbackfill,batch,backfill,replica,0.7590,197161\nreplica,warehouse,warehouse,warehouse,0.7977,73627\nbackfill,warehouse,replica,replica,0.0887,440596\nwarehouse,backfill,batch,replica,0.5423,792109\nbatch,warehouse,backfill,shard,0.2663,493956\nreplica,replica,warehouse,replica,0.3088,168643\nbatch,batch,shard,backfill,0.4998,127973\nwarehouse,warehouse,shard,warehouse,0.9246,478987\nbatch,backfill,backfill,warehouse,0.1341,448440\nwarehouse,shard,warehouse,backfill,0.1344,21132\nreplica,warehouse,shard,backfill,0.9775,794542\nbackfill,warehouse,shard,replica,0.8391,943641\nbackfill,shard,backfill,batch,0.1569,217619\nbackfill,replica,replica,warehouse,0.1565,260539\nbatch,backfill,shard,shard,0.3091,346812\nbatch,batch,backfill,warehouse,0.3706,671042\nreplica,warehouse,backfill,replica,0.0197,198476\nbackfill,backfill,shard,shard,0.3416,869385\nbatch,warehouse,shard,batch,0.1294,877505\nbackfill,shard,backfill,shard,0.2572,523648\nwarehouse,backfill,warehouse,backfill,0.8332,956418\nwarehouse,backfill,replica,batch,0.9433,254274\nbatch,shard,shard,backfill,0.5266,310600\nreplica,shard,backfill,warehouse,0.6978,146580\nbackfill,batch,backfill,backfill,0.6252,536158\nbackfill,batch,batch,batch,0.0848,62460\nwarehouse,replica,backfill,batch,0.9506,732023\nwarehouse,replica,backfill,warehouse,0.9766,842436\nbackfill,replica,replica,warehouse,0.4315,13466\nwarehouse,backfill,shard,warehouse,0.7609,82933\nwarehouse,warehouse,batch,warehouse,0.6501,856563\nshard,batch,warehouse,warehouse,0.8303,498329\nshard,batch,backfill,warehouse,0.9660,348011\nwarehouse,shard,replica,shard,0.5841,213021\nshard,warehouse,backfill,backfill,0.8724,897952\nbackfill,batch,backfill,shard,0.4279,680266\nbatch,batch,replica,batch,0.8125,732951\nreplica,replica,warehouse,backfill,0.4156,74295\nwarehouse,shard,replica,shard,0.3257,36296\nbackfill,replica,backfill,batch,0.8191,595459\nbackfill,warehouse,shard,warehouse,0.7764,212150\nbackfill,warehouse,backfill,warehouse,0.2557,394516\nshard,batch,warehouse,replica,0.7994,846948\nbatch,batch,backfill,shard,0.8697,478151\nwarehouse,batch,shard,shard,0.8341,692323\nbatch,warehouse,shard,backfill,0.4625,956260\nbackfill,backfill,shard,backfill,0.6924,860165\nwarehouse,warehouse,warehouse,backfill,0.4081,596126\nwarehouse,backfill,batch,warehouse,0.0048,754837\nreplica,backfill,warehouse,batch,0.0534,541126\nshard,backfill,batch,backfill,0.4041,644663\nbatch,shard,shard,shard,0.3688,453557\nbatch,backfill,replica,warehouse,0.9402,761622\nshard,batch,warehouse,backfill,0.5895,293823\nbackfill,batch,warehouse,shard,0.7752,337078\nbatch,replica,replica,shard,0.1376,300224\nshard,backfill,backfill,warehouse,0.0746,504932\nreplica,replica,batch,batch,0.5195,312384\nwarehouse,warehouse,shard,warehouse,0.5648,919424\nbatch,shard,replica,replica,0.0902,407884\nshard,batch,backfill,batch,0.0611,301322\nreplica,replica,backfill,backfill,0.0663,244974\nbatch,batch,backfill,replica,0.4241,458900\nbatch,batch,warehouse,warehouse,0.3416,448460\nshard,warehouse,batch,shard,0.5979,510151\nshard,shard,replica,backfill,0.2653,629373\nreplica,replica,replica,backfill,0.7428,70853\nbatch,warehouse,batch,shard,0.9413,931005\nreplica,batch,batch,replica,0.6721,919273\nreplica,batch,batch,warehouse,0.7133,205825\nshard,backfill,warehouse,batch,0.0574,14027\nshard,replica,shard,backfill,0.5464,585848\nbackfill,batch,shard,backfill,0.7755,210350\nshard,replica,replica,warehouse,0.6908,910915\nbatch,backfill,shard,replica,0.9294,412847\nreplica,warehouse,warehouse,replica,0.3966,571070\nreplica,shard,replica,shard,0.8181,602054\nbatch,warehouse,shard,shard,0.2656,69765\nreplica,shard,replica,warehouse,0.8910,103426\nbatch,shard,warehouse,batch,0.9880,633344\nwarehouse,backfill,batch,warehouse,0.9724,219869\nbackfill,replica,batch,warehouse,0.8061,66467\nreplica,batch,batch,replica,0.3444,833644\nshard,batch,shard,replica,0.2748,696014\nbatch,shard,batch,warehouse,0.3531,482254\nbatch,batch,replica,shard,0.2600,403453\nwarehouse,shard,replica,backfill,0.6831,786757\nbackfill,batch,batch,warehouse,0.2146,917930\nreplica,warehouse,warehouse,replica,0.6155,231745\nbackfill,replica,batch,warehouse,0.9301,100135\nbatch,shard,replica,replica,0.3410,579095\nwarehouse,shard,backfill,batch,0.0145,70033\nbatch,warehouse,warehouse,backfill,0.0763,150496\nwarehouse,replica,batch,warehouse,0.7854,881920\nbatch,warehouse,backfill,replica,0.3215,37273\nwarehouse,batch,backfill,shard,0.2145,741060\nshard,warehouse,batch,shard,0.5059,52555\nreplica,batch,warehouse,batch,0.3242,168093\nbackfill,replica,backfill,batch,0.0014,252934\nbatch,backfill,replica,warehouse,0.3653,542290\nbackfill,shard,shard,batch,0.3433,99053\nreplica,warehouse,replica,warehouse,0.7702,49261\nbackfill,shard,backfill,shard,0.2648,445066\nreplica,backfill,batch,replica,0.1429,776259\nshard,batch,shard,backfill,0.3527,134347\nwarehouse,warehouse,warehouse,warehouse,0.5615,77317\nwarehouse,backfill,shard,batch,0.7799,450388\nbatch,backfill,shard,backfill,0.1306,865095\nbackfill,warehouse,replica,backfill,0.2672,108642\nbackfill,shard,replica,backfill,0.0783,187694\nwarehouse,warehouse,backfill,replica,0.3682,859854\nreplica,shard,batch,backfill,0.1414,624071\nbatch,backfill,warehouse,batch,0.7320,77765\nshard,warehouse,backfill,shard,0.6231,288776\nbackfill,batch,shard,backfill,0.3736,619946\nbatch,backfill,backfill,warehouse,0.5594,321497\nbackfill,batch,shard,backfill,0.5945,476067\nwarehouse,shard,warehouse,batch,0.3369,261686\nbackfill,warehouse,backfill,backfill,0.5955,872028\nwarehouse,shard,warehouse,replica,0.5738,276258\nreplica,backfill,batch,warehouse,0.6762,876688\nbatch,warehouse,warehouse,warehouse,0.3764,346160\nreplica,batch,replica,replica,0.0383,175384\nreplica,warehouse,batch,shard,0.7085,90087\nshard,backfill,replica,backfill,0.8346,351486\nbatch,backfill,batch,warehouse,0.3079,119152\nbackfill,backfill,batch,batch,0.3355,193653\nreplica,warehouse,replica,backfill,0.8933,983355\nbackfill,batch,shard,backfill,0.8232,818612\nbackfill,backfill,batch,warehouse,0.7626,884074\nreplica,shard,replica,replica,0.2776,591707\nreplica,shard,warehouse,shard,0.0794,964161\nbackfill,shard,warehouse,batch,0.3331,663752\nbackfill,warehouse,replica,shard,0.1096,603607\nwarehouse,batch,batch,backfill,0.0846,555287\nwarehouse,batch,batch,warehouse,0.3442,681737\nreplica,warehouse,backfill,replica,0.2525,886127\nbackfill,warehouse,batch,warehouse,0.9505,68197\nshard,batch,replica,backfill,0.5274,504564\nshard,batch,backfill,replica,0.6830,623610\nbatch,shard,replica,warehouse,0.0851,841885\nshard,replica,shard,backfill,0.6383,804781\nbackfill,replica,batch,shard,0.1799,392839\nshard,batch,replica,replica,0.1794,366181\nshard,shard,replica,batch,0.3333,834164\nshard,shard,replica,batch,0.0554,154493\nreplica,warehouse,replica,warehouse,0.7344,757933\nbatch,batch,backfill,warehouse,0.9553,942825\nreplica,backfill,replica,shard,0.9020,925136\nbatch,backfill,batch,batch,0.1784,6816\nbatch,shard,warehouse,replica,0.0846,687956\nwarehouse,shard,shard,replica,0.3929,172274\nbackfill,backfill,backfill,batch,0.6162,625788\nbatch,backfill,batch,batch,0.7800,459251\nwarehouse,backfill,shard,shard,0.9149,901610\nshard,batch,batch,batch,0.9179,716236\nwarehouse,replica,backfill,replica,0.0556,561316\nbackfill,replica,shard,backfill,0.6071,655547\nbackfill,backfill,warehouse,backfill,0.7707,179113\nwarehouse,replica,batch,shard,0.5579,112013\nbackfill,warehouse,batch,batch,0.7463,375695\nbackfill,replica,replica,warehouse,0.8894,664409\nbackfill,warehouse,shard,batch,0.1676,553688\nwarehouse,replica,shard,backfill,0.5925,500742\nreplica,replica,batch,replica,0.3534,798606\nshard,replica,warehouse,batch,0.7183,192833\nbatch,batch,backfill,backfill,0.1947,130148\nwarehouse,batch,batch,replica,0.2144,85307\nshard,warehouse,batch,shard,0.1286,128438\nbackfill,shard,warehouse,shard,0.9704,922974\nshard,backfill,batch,batch,0.1365,123356\nshard,shard,backfill,warehouse,0.4871,19798\nbackfill,batch,warehouse,warehouse,0.5259,729613\nshard,batch,shard,warehouse,0.2917,333139\nbatch,backfill,batch,backfill,0.9799,305484\nbatch,replica,shard,replica,0.9964,116793\nwarehouse,backfill,warehouse,shard,0.3948,995838\nreplica,batch,warehouse,backfill,0.3691,587736\nreplica,backfill,batch,batch,0.5211,636655\nwarehouse,backfill,replica,replica,0.6950,358965\nshard,shard,backfill,warehouse,0.3061,322623\nshard,warehouse,batch,shard,0.5795,792017\nreplica,backfill,batch,shard,0.3520,756426\nreplica,shard,replica,warehouse,0.2812,95545\nshard,replica,batch,shard,0.0897,908586\nbackfill,warehouse,warehouse,backfill,0.2118,64983\nreplica,batch,warehouse,batch,0.7979,691169\nreplica,batch,replica,replica,0.8088,231018\nwarehouse,backfill,backfill,backfill,0.0576,330244\nreplica,warehouse,shard,batch,0.5140,93783\nreplica,replica,backfill,replica,0.0303,266796\nshard,batch,warehouse,replica,0.8416,576544\nbackfill,warehouse,replica,shard,0.4989,731341\nreplica,batch,replica,replica,0.1855,793107\nshard,replica,batch,warehouse,0.4458,480091\nreplica,shard,batch,warehouse,0.3155,126721\nwarehouse,replica,backfill,replica,0.1127,788040\nreplica,shard,backfill,replica,0.6310,496366\nreplica,backfill,shard,shard,0.7345,469951\nbackfill,backfill,shard,batch,0.8835,215207\nreplica,warehouse,batch,shard,0.7597,597857\nshard,warehouse,shard,shard,0.0645,862732\nwarehouse,batch,shard,batch,0.6452,665515\nbackfill,batch,backfill,warehouse,0.7981,819526\nwarehouse,warehouse,shard,warehouse,0.7057,154298\nbatch,shard,batch,batch,0.3171,198786\nwarehouse,warehouse,shard,replica,0.1048,267559\nreplica,replica,batch,shard,0.3161,672724\nshard,replica,shard,backfill,0.0228,853463\nshard,warehouse,backfill,shard,0.6839,776265\nreplica,replica,shard,replica,0.1081,764589\nshard,batch,warehouse,warehouse,0.2058,295397\nwarehouse,shard,warehouse,warehouse,0.3900,364424\nbackfill,batch,shard,backfill,0.4739,518733\nreplica,backfill,backfill,backfill,0.6215,990528\nwarehouse,replica,warehouse,batch,0.4139,479099\nbatch,batch,backfill,warehouse,0.3012,454276\nshard,replica,warehouse,batch,0.4675,229646\nbackfill,backfill,shard,warehouse,0.6504,222092\nwarehouse,replica,replica,batch,0.0247,892558\nbatch,backfill,backfill,shard,0.3487,354824\nshard,shard,batch,replica,0.6211,135105\nbatch,shard,batch,shard,0.8164,157743\nbackfill,replica,shard,batch,0.0637,486218\nwarehouse,batch,warehouse,replica,0.2111,322308\nshard,shard,replica,shard,0.6171,786391\nshard,shard,batch,shard,0.4858,416033\nreplica,replica,replica,batch,0.4365,447428\nshard,shard,batch,replica,0.9955,4297\nreplica,shard,replica,batch,0.3657,144750\nshard,shard,replica,warehouse,0.8739,782508\nbatch,replica,replica,replica,0.2926,473228\nwarehouse,batch,warehouse,warehouse,0.3982,236131\nreplica,shard,shard,backfill,0.7964,683236\nbatch,warehouse,backfill,warehouse,0.1303,917412\nshard,replica,replica,warehouse,0.3500,988731\nbackfill,replica,backfill,shard,0.9476,952980\nbackfill,replica,replica,warehouse,0.1501,242426\nshard,batch,replica,backfill,0.7617,400993\nreplica,backfill,replica,replica,0.5297,201612\nwarehouse,backfill,replica,shard,0.1496,545804\nshard,warehouse,batch,replica,0.6034,476371\nbatch,shard,warehouse,shard,0.7280,837964\nbatch,shard,replica,batch,0.1874,815364\nwarehouse,backfill,replica,batch,0.7328,565592\nbatch,backfill,shard,backfill,0.0003,951767\nbatch,warehouse,backfill,replica,0.5425,499817\nshard,batch,backfill,backfill,0.5114,571429\nshard,backfill,batch,backfill,0.7464,196449\nwarehouse,backfill,shard,shard,0.1753,4826\nwarehouse,shard,shard,shard,0.4099,407773\nreplica,warehouse,replica,batch,0.8761,324339\nbackfill,warehouse,shard,warehouse,0.2147,635034\nshard,replica,shard,warehouse,0.2281,630291\nbackfill,shard,warehouse,backfill,0.2387,568289\nwarehouse,batch,shard,replica,0.1235,125671\nreplica,batch,backfill,warehouse,0.9555,964445\nbackfill,shard,warehouse,shard,0.2571,708034\nshard,warehouse,replica,batch,0.2878,38812\nbackfill,backfill,batch,backfill,0.1940,419575\nbackfill,shard,replica,shard,0.3318,595354\nwarehouse,shard,shard,shard,0.8908,995556\nshard,shard,batch,batch,0.4882,670678\nbatch,backfill,shard,shard,0.6741,788379\nreplica,warehouse,warehouse,replica,0.9739,293837\nwarehouse,replica,warehouse,backfill,0.2008,215933\nwarehouse,backfill,backfill,warehouse,0.3643,775960\nshard,shard,batch,warehouse,0.4600,694866\nwarehouse,replica,shard,backfill,0.4560,220460\nbatch,replica,replica,warehouse,0.6430,597779\nbackfill,shard,warehouse,replica,0.7984,389466\nwarehouse,warehouse,batch,backfill,0.5391,872183",
+      "tool_call_id": "case-03-pipeline-migration-incident-tc008",
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m040",
+      "metadata": {},
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "The report writes one warning line in the middle of the export, and that line is the whole incident.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m041",
+      "metadata": {
+        "filler": "user_note"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "user",
+      "text": "Is the rollback script idempotent, or does it need a clean batch table?",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m042",
+      "metadata": {
+        "filler": "duplicate",
+        "note": "near-duplicate of an earlier turn"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Running the rollback dry run again to confirm it is idempotent.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m043",
+      "metadata": {
+        "todo_items": 4,
+        "todo_step": 1
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Board update after the metrics export.",
+      "tool_call_id": null,
+      "tool_calls": [
+        {
+          "arguments": "{\"todos\": [{\"content\": \"Quantify duplicates per shard\", \"id\": \"case-03-pipeline-migration-incident-todo00\", \"order\": 0, \"priority\": \"high\", \"status\": \"completed\"}, {\"content\": \"Identify the migration that rewrote the table\", \"id\": \"case-03-pipeline-migration-incident-todo01\", \"order\": 1, \"priority\": \"medium\", \"status\": \"completed\"}, {\"content\": \"Correct the backfill pacing\", \"id\": \"case-03-pipeline-migration-incident-todo02\", \"order\": 2, \"priority\": \"medium\", \"status\": \"in_progress\"}, {\"content\": \"Verify the rollback script on a copy\", \"id\": \"case-03-pipeline-migration-incident-todo03\", \"order\": 3, \"priority\": \"medium\", \"status\": \"pending\"}]}",
+          "id": "case-03-pipeline-migration-incident-tc009",
+          "name": "write_todos"
+        }
+      ]
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m044",
+      "metadata": {
+        "todo_step": 1
+      },
+      "name": "write_todos",
+      "pinned": false,
+      "role": "tool",
+      "text": "Todos updated: 4 items, 2 completed, 2 open.",
+      "tool_call_id": "case-03-pipeline-migration-incident-tc009",
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m045",
+      "metadata": {
+        "filler": "small_tool_run"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Let me check pipelines/order_events/load.py with `psql -f migrations/20260214_003_split_order_events.sql`.",
+      "tool_call_id": null,
+      "tool_calls": [
+        {
+          "arguments": "{\"path\": \".\", \"pattern\": \"shard_reader\"}",
+          "id": "case-03-pipeline-migration-incident-tc010",
+          "name": "grep"
+        }
+      ]
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m046",
+      "metadata": {
+        "filler": "small_tool_run"
+      },
+      "name": "grep",
+      "pinned": false,
+      "role": "tool",
+      "text": "$ grep -rn --color=never grep -rn dedupe_key pipelines .\n11 matches\npipelines/order_events/extract.py:1: if shard == 7:\nscripts/rollback_order_events.py:785: with engine.begin() as co...\ntests/pipelines/test_order_events.py:316: dedupe_key = f'{row.o...\nmigrations/20260214_003_split_order_events.sql:853: dedupe_key ...\ntests/pipelines/test_order_events.py:224: connection.execute(co...\nmigrations/20260214_003_split_order_events.sql:664: if shard ==...\nconfig/pipeline.yaml:841: reader = replica_reader()\npipelines/order_events/dedupe.py:764: with engine.begin() as co...\ntests/pipelines/test_order_events.py:459: if shard == 7:\ntests/pipelines/test_order_events.py:111: with engine.begin() a...\ntests/pipelines/test_order_events.py:855: connection.execute(co...",
+      "tool_call_id": "case-03-pipeline-migration-incident-tc010",
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m047",
+      "metadata": {
+        "filler": "duplicate",
+        "note": "near-duplicate of an earlier turn"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Let me check sql/analytics/order_events.sql with `airflow dags backfill order_events -s 2026-02-01`.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m048",
+      "metadata": {
+        "states_fact": "batch-size"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Corrected pacing: batch size 5000 with a 2 s sleep between batches. Twenty thousand rows with no sleep is what produced the lag in the first place.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m049",
+      "metadata": {
+        "filler": "assistant_note"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "The loader writes rows before the dedupe key is computed, so duplicates land first. I re-read tests/pipelines/test_order_events.py around `backfill_batch` before settling on that.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m050",
+      "metadata": {
+        "filler": "small_tool_run"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Let me check sql/analytics/order_events.sql with `grep -rn dedupe_key pipelines`.",
+      "tool_call_id": null,
+      "tool_calls": [
+        {
+          "arguments": "{\"path\": \".\", \"pattern\": \"backfill_batch\"}",
+          "id": "case-03-pipeline-migration-incident-tc011",
+          "name": "grep"
+        }
+      ]
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m051",
+      "metadata": {
+        "filler": "small_tool_run"
+      },
+      "name": "grep",
+      "pinned": false,
+      "role": "tool",
+      "text": "$ grep -rn --color=never python scripts/rollback_order_events.py --dry-run .\n33 matches\npipelines/order_events/extract.py:255: loader.load(batch, table...\npipelines/order_events/dedupe.py:528: if shard == 7:\nsql/analytics/order_events.sql:120: connection.execute(copy_stm...\nmigrations/20260214_003_split_order_events.sql:332: with engine...\nmigrations/20260214_003_split_order_events.sql:53: with engine....\npipelines/order_events/load.py:263: dedupe_key = f'{row.order_i...\ndags/order_events_backfill.py:843: reader = replica_reader()\nsql/analytics/order_events.sql:218: loader.load(batch, table='a...\nsql/analytics/order_events.sql:129: with engine.begin() as conn...\nsql/analytics/order_events.sql:190: dedupe_key = f'{row.order_i...\npipelines/order_events/load.py:652: connection.execute(copy_stm...\ntests/pipelines/test_order_events.py:803: reader = replica_read...\ndags/order_events_backfill.py:433: connection.execute(copy_stmt...\nconfig/pipeline.yaml:729: dedupe_key = f'{row.order_id}:{row.ev...\nscripts/rollback_order_events.py:338: connection.execute(copy_s...\npipelines/order_events/extract.py:519: connection.execute(copy_...\nsql/analytics/order_events.sql:444: connection.execute(copy_stm...\nconfig/pipeline.yaml:565: reader = replica_reader()\ndags/order_events_backfill.py:4: connection.execute(copy_stmt, ...\nsql/analytics/order_events.sql:602: reader = replica_reader()\ntests/pipelines/test_order_events.py:135: with engine.begin() a...\nsql/analytics/order_events.sql:526: if shard == 7:\npipelines/order_events/dedupe.py:808: reader = replica_reader()\nsql/analytics/order_events.sql:36: loader.load(batch, table='an...\npipelines/order_events/extract.py:177: dedupe_key = f'{row.orde...\ndags/order_events_backfill.py:37: dedupe_key = f'{row.order_id}...\npipelines/order_events/dedupe.py:140: reader = replica_reader()\npipelines/order_events/extract.py:100: dedupe_key = f'{row.orde...\ndags/order_events_backfill.py:20: connection.execute(copy_stmt,...\npipelines/order_events/load.py:429: reader = replica_reader()\npipelines/order_events/load.py:856: reader = replica_reader()\ndags/order_events_backfill.py:157: loader.load(batch, table='an...\nscripts/rollback_order_events.py:140: connection.execute(copy_s...",
+      "tool_call_id": "case-03-pipeline-migration-incident-tc011",
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m052",
+      "metadata": {
+        "filler": "small_tool_run"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Let me check pipelines/order_events/dedupe.py with `dbt run --select order_events`.",
+      "tool_call_id": null,
+      "tool_calls": [
+        {
+          "arguments": "{\"command\": \"dbt run --select order_events\"}",
+          "id": "case-03-pipeline-migration-incident-tc012",
+          "name": "execute"
+        }
+      ]
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m053",
+      "metadata": {
+        "filler": "small_tool_run"
+      },
+      "name": "execute",
+      "pinned": false,
+      "role": "tool",
+      "text": "--- psql -f migrations/20260214_003_split_order_events.sql ---\nread_file: 43 lines, utf-8, no trailing newline stripped\nline numbers are 1-based, as in the editor\n 1|         reader = replica_reader()\n 2|     loader.load(batch, table='analytics.order_events')\n 3|         connection.execute(copy_stmt, batch)\n 4|         reader = replica_reader()\n 5|     with engine.begin() as connection:\n 6|     if shard == 7:\n 7|     if shard == 7:\n 8|         reader = replica_reader()\n 9|     if shard == 7:\n10|     if shard == 7:\n11|     dedupe_key = f'{row.order_id}:{row.event_ts}'\n12|     dedupe_key = f'{row.order_id}:{row.event_ts}'\n13|     dedupe_key = f'{row.order_id}:{row.event_ts}'\n14|     dedupe_key = f'{row.order_id}:{row.event_ts}'\n15|     loader.load(batch, table='analytics.order_events')\n16|         reader = replica_reader()\n17|     if shard == 7:\n18|     if shard == 7:\n19|         connection.execute(copy_stmt, batch)\n20|         reader = replica_reader()\n21|         reader = replica_reader()\n22|     if shard == 7:\n23|     with engine.begin() as connection:\n24|     if shard == 7:\n25|         reader = replica_reader()\n26|         connection.execute(copy_stmt, batch)\n27|         connection.execute(copy_stmt, batch)\n28|     loader.load(batch, table='analytics.order_events')\n29|     with engine.begin() as connection:\n30|     loader.load(batch, table='analytics.order_events')\n31|     with engine.begin() as connection:\n32|         connection.execute(copy_stmt, batch)\n33|     with engine.begin() as connection:\n34|     dedupe_key = f'{row.order_id}:{row.event_ts}'\n35|         reader = replica_reader()\n36|     with engine.begin() as connection:\n37|     loader.load(batch, table='analytics.order_events')\n38|         connection.execute(copy_stmt, batch)\n39|         connection.execute(copy_stmt, batch)\n40|     loader.load(batch, table='analytics.order_events')",
+      "tool_call_id": "case-03-pipeline-migration-incident-tc012",
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m054",
+      "metadata": {
+        "filler": "assistant_note"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "The backfill reuses one connection per batch and never resets the lock timeout. I re-read pipelines/order_events/extract.py around `backfill_batch` before settling on that.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m055",
+      "metadata": {
+        "filler": "boilerplate"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Running `python scripts/rollback_order_events.py --dry-run` now and reporting back; no other file changes in flight.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m056",
+      "metadata": {},
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Watching the corrected backfill for one shard.",
+      "tool_call_id": null,
+      "tool_calls": [
+        {
+          "arguments": "{\"command\": \"airflow tasks logs order_events_backfill backfill_shard 2026-02-14\"}",
+          "id": "case-03-pipeline-migration-incident-tc013",
+          "name": "execute"
+        }
+      ]
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m057",
+      "metadata": {
+        "tool_output_chars": 58976,
+        "tool_output_lines": 1150
+      },
+      "name": "execute",
+      "pinned": false,
+      "role": "tool",
+      "text": "$ airflow tasks logs order_events_backfill backfill_shard 2026-02-14\ncaptured 1150 lines, exit status follows\n13:34:36 WARNING dedupe key recomputed for 118 rows\n12:32:41 DEBUG   dedupe key recomputed for 118 rows\n03:51:36 ERROR   batch committed, rows written 4987\n18:59:51 ERROR   COPY finished in 9.4 s\n10:59:21 ERROR   lock acquired on analytics.order_events\n12:29:43 INFO    shard reader lagging by 42 s\n06:18:16 WARNING batch committed, rows written 4987\n03:06:13 DEBUG   COPY finished in 9.4 s\n08:27:15 DEBUG   batch committed, rows written 4987\n00:07:47 INFO    batch committed, rows written 4987\n02:02:07 INFO    shard reader lagging by 42 s\n10:31:03 INFO    batch committed, rows written 4987\n16:40:30 ERROR   dedupe key recomputed for 118 rows\n01:11:56 DEBUG   batch committed, rows written 4987\n20:55:31 ERROR   shard reader lagging by 42 s\n00:30:27 DEBUG   COPY finished in 9.4 s\n12:06:18 ERROR   batch committed, rows written 4987\n09:00:05 DEBUG   shard reader lagging by 42 s\n16:25:02 ERROR   shard reader lagging by 42 s\n06:21:47 ERROR   COPY finished in 9.4 s\n13:37:13 INFO    COPY finished in 9.4 s\n22:41:56 DEBUG   lock acquired on analytics.order_events\n16:36:18 DEBUG   batch committed, rows written 4987\n04:34:28 INFO    watermark advanced to 2026-02-14T03:00:0...\n13:38:50 INFO    watermark advanced to 2026-02-14T03:00:0...\n21:52:14 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n03:33:46 WARNING COPY finished in 9.4 s\n22:31:49 ERROR   lock acquired on analytics.order_events\n14:44:49 INFO    dedupe key recomputed for 118 rows\n02:43:52 INFO    shard reader lagging by 42 s\n04:58:35 INFO    batch committed, rows written 4987\n02:22:31 ERROR   COPY finished in 9.4 s\n13:37:21 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n06:06:54 INFO    dedupe key recomputed for 118 rows\n08:00:35 INFO    dedupe key recomputed for 118 rows\n02:00:17 INFO    dedupe key recomputed for 118 rows\n08:36:59 INFO    watermark advanced to 2026-02-14T03:00:0...\n07:44:10 DEBUG   lock acquired on analytics.order_events\n19:56:32 WARNING COPY finished in 9.4 s\n05:32:23 INFO    batch committed, rows written 4987\n08:39:00 ERROR   shard reader lagging by 42 s\n10:34:21 INFO    batch committed, rows written 4987\n09:50:52 INFO    batch committed, rows written 4987\n07:22:49 ERROR   shard reader lagging by 42 s\n23:36:01 INFO    shard reader lagging by 42 s\n01:03:15 INFO    batch committed, rows written 4987\n18:22:05 DEBUG   batch committed, rows written 4987\n18:56:36 DEBUG   COPY finished in 9.4 s\n18:05:14 DEBUG   batch committed, rows written 4987\n00:09:17 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n16:04:29 INFO    lock acquired on analytics.order_events\n02:10:04 DEBUG   COPY finished in 9.4 s\n10:33:09 WARNING watermark advanced to 2026-02-14T03:00:0...\n19:17:13 DEBUG   lock acquired on analytics.order_events\n09:46:55 DEBUG   batch committed, rows written 4987\n15:30:52 INFO    shard reader lagging by 42 s\n19:09:03 ERROR   watermark advanced to 2026-02-14T03:00:0...\n02:39:41 INFO    lock acquired on analytics.order_events\n15:37:02 WARNING lock acquired on analytics.order_events\n04:03:56 ERROR   COPY finished in 9.4 s\n15:33:26 INFO    lock acquired on analytics.order_events\n02:42:17 ERROR   batch committed, rows written 4987\n20:22:55 INFO    batch committed, rows written 4987\n04:46:39 DEBUG   batch committed, rows written 4987\n09:21:58 INFO    lock acquired on analytics.order_events\n11:39:42 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n12:00:19 DEBUG   dedupe key recomputed for 118 rows\n15:04:14 INFO    dedupe key recomputed for 118 rows\n18:32:22 INFO    watermark advanced to 2026-02-14T03:00:0...\n17:47:09 ERROR   COPY finished in 9.4 s\n21:04:52 INFO    dedupe key recomputed for 118 rows\n08:09:59 INFO    watermark advanced to 2026-02-14T03:00:0...\n22:39:57 INFO    dedupe key recomputed for 118 rows\n17:18:34 WARNING watermark advanced to 2026-02-14T03:00:0...\n03:56:29 INFO    COPY finished in 9.4 s\n02:53:17 ERROR   lock acquired on analytics.order_events\n10:33:44 DEBUG   dedupe key recomputed for 118 rows\n02:34:56 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n11:40:27 WARNING dedupe key recomputed for 118 rows\n04:16:49 WARNING batch committed, rows written 4987\n22:57:44 ERROR   lock acquired on analytics.order_events\n10:20:26 DEBUG   dedupe key recomputed for 118 rows\n01:36:38 WARNING dedupe key recomputed for 118 rows\n00:57:52 WARNING dedupe key recomputed for 118 rows\n09:15:37 INFO    batch committed, rows written 4987\n09:12:08 INFO    shard reader lagging by 42 s\n22:07:09 INFO    watermark advanced to 2026-02-14T03:00:0...\n12:09:01 DEBUG   lock acquired on analytics.order_events\n08:02:07 DEBUG   shard reader lagging by 42 s\n09:06:10 WARNING shard reader lagging by 42 s\n13:10:54 INFO    batch committed, rows written 4987\n08:20:02 INFO    COPY finished in 9.4 s\n00:32:25 INFO    COPY finished in 9.4 s\n23:41:51 INFO    batch committed, rows written 4987\n10:13:44 DEBUG   dedupe key recomputed for 118 rows\n12:26:27 INFO    COPY finished in 9.4 s\n22:23:46 INFO    shard reader lagging by 42 s\n20:47:17 ERROR   shard reader lagging by 42 s\n14:21:49 INFO    COPY finished in 9.4 s\n13:41:23 INFO    lock acquired on analytics.order_events\n06:32:21 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n23:47:51 WARNING COPY finished in 9.4 s\n15:21:13 WARNING watermark advanced to 2026-02-14T03:00:0...\n07:25:50 WARNING watermark advanced to 2026-02-14T03:00:0...\n13:59:39 ERROR   COPY finished in 9.4 s\n21:22:56 ERROR   batch committed, rows written 4987\n20:23:17 ERROR   batch committed, rows written 4987\n05:13:21 INFO    batch committed, rows written 4987\n08:41:59 DEBUG   dedupe key recomputed for 118 rows\n07:52:33 INFO    COPY finished in 9.4 s\n12:18:19 ERROR   dedupe key recomputed for 118 rows\n22:27:36 INFO    shard reader lagging by 42 s\n11:15:09 ERROR   shard reader lagging by 42 s\n21:04:02 WARNING batch committed, rows written 4987\n23:34:08 INFO    watermark advanced to 2026-02-14T03:00:0...\n13:29:08 WARNING lock acquired on analytics.order_events\n05:15:19 ERROR   shard reader lagging by 42 s\n03:20:07 DEBUG   COPY finished in 9.4 s\n21:13:34 INFO    watermark advanced to 2026-02-14T03:00:0...\n15:44:35 INFO    watermark advanced to 2026-02-14T03:00:0...\n04:04:13 ERROR   shard reader lagging by 42 s\n00:41:53 ERROR   COPY finished in 9.4 s\n12:31:50 INFO    watermark advanced to 2026-02-14T03:00:0...\n10:16:05 DEBUG   batch committed, rows written 4987\n00:35:57 ERROR   batch committed, rows written 4987\n01:30:16 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n03:08:00 INFO    lock acquired on analytics.order_events\n00:14:48 DEBUG   batch committed, rows written 4987\n04:04:39 WARNING watermark advanced to 2026-02-14T03:00:0...\n03:02:53 INFO    watermark advanced to 2026-02-14T03:00:0...\n09:39:35 WARNING batch committed, rows written 4987\n05:49:58 DEBUG   COPY finished in 9.4 s\n03:55:27 INFO    batch committed, rows written 4987\n06:31:13 INFO    COPY finished in 9.4 s\n02:19:28 WARNING batch committed, rows written 4987\n08:53:57 WARNING COPY finished in 9.4 s\n18:03:59 ERROR   watermark advanced to 2026-02-14T03:00:0...\n10:27:53 INFO    watermark advanced to 2026-02-14T03:00:0...\n03:23:06 DEBUG   batch committed, rows written 4987\n22:40:25 ERROR   watermark advanced to 2026-02-14T03:00:0...\n23:56:31 INFO    shard reader lagging by 42 s\n02:18:14 INFO    lock acquired on analytics.order_events\n03:24:47 WARNING dedupe key recomputed for 118 rows\n02:06:06 INFO    COPY finished in 9.4 s\n01:18:10 ERROR   COPY finished in 9.4 s\n18:17:26 ERROR   COPY finished in 9.4 s\n20:57:51 DEBUG   dedupe key recomputed for 118 rows\n09:06:14 INFO    dedupe key recomputed for 118 rows\n10:44:41 INFO    dedupe key recomputed for 118 rows\n22:44:45 INFO    batch committed, rows written 4987\n18:46:08 DEBUG   shard reader lagging by 42 s\n01:38:19 INFO    batch committed, rows written 4987\n11:01:33 WARNING dedupe key recomputed for 118 rows\n21:16:28 INFO    shard reader lagging by 42 s\n15:27:25 ERROR   dedupe key recomputed for 118 rows\n22:06:37 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n15:37:27 WARNING dedupe key recomputed for 118 rows\n17:39:42 DEBUG   dedupe key recomputed for 118 rows\n04:03:43 INFO    lock acquired on analytics.order_events\n23:21:18 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n21:53:21 DEBUG   COPY finished in 9.4 s\n10:30:28 INFO    dedupe key recomputed for 118 rows\n12:15:23 INFO    COPY finished in 9.4 s\n06:26:11 ERROR   COPY finished in 9.4 s\n21:23:37 WARNING shard reader lagging by 42 s\n16:15:55 INFO    batch committed, rows written 4987\n23:53:44 WARNING batch committed, rows written 4987\n18:42:39 ERROR   batch committed, rows written 4987\n20:36:42 INFO    dedupe key recomputed for 118 rows\n16:50:10 INFO    COPY finished in 9.4 s\n10:42:44 ERROR   COPY finished in 9.4 s\n02:06:09 INFO    dedupe key recomputed for 118 rows\n14:59:43 ERROR   shard reader lagging by 42 s\n10:39:30 DEBUG   shard reader lagging by 42 s\n20:40:28 WARNING lock acquired on analytics.order_events\n19:20:54 INFO    dedupe key recomputed for 118 rows\n09:25:09 DEBUG   batch committed, rows written 4987\n14:57:31 INFO    watermark advanced to 2026-02-14T03:00:0...\n16:23:56 ERROR   shard reader lagging by 42 s\n11:56:40 INFO    batch committed, rows written 4987\n04:18:47 INFO    batch committed, rows written 4987\n20:22:00 WARNING COPY finished in 9.4 s\n19:14:51 ERROR   COPY finished in 9.4 s\n05:42:48 DEBUG   COPY finished in 9.4 s\n13:22:07 INFO    lock acquired on analytics.order_events\n14:54:17 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n00:23:04 DEBUG   lock acquired on analytics.order_events\n07:57:07 INFO    watermark advanced to 2026-02-14T03:00:0...\n10:08:46 DEBUG   batch committed, rows written 4987\n23:53:05 ERROR   COPY finished in 9.4 s\n20:07:01 DEBUG   batch committed, rows written 4987\n14:55:23 DEBUG   dedupe key recomputed for 118 rows\n02:11:39 INFO    watermark advanced to 2026-02-14T03:00:0...\n16:27:05 WARNING COPY finished in 9.4 s\n02:50:50 ERROR   watermark advanced to 2026-02-14T03:00:0...\n06:48:52 WARNING batch committed, rows written 4987\n16:49:46 DEBUG   COPY finished in 9.4 s\n01:51:13 WARNING watermark advanced to 2026-02-14T03:00:0...\n11:57:54 INFO    batch committed, rows written 4987\n22:59:33 INFO    COPY finished in 9.4 s\n20:27:04 DEBUG   shard reader lagging by 42 s\n02:35:40 DEBUG   batch committed, rows written 4987\n06:24:16 INFO    shard reader lagging by 42 s\n19:15:53 INFO    watermark advanced to 2026-02-14T03:00:0...\n16:32:35 INFO    watermark advanced to 2026-02-14T03:00:0...\n18:57:25 DEBUG   COPY finished in 9.4 s\n07:30:03 DEBUG   dedupe key recomputed for 118 rows\n22:27:16 ERROR   batch committed, rows written 4987\n08:52:08 ERROR   batch committed, rows written 4987\n11:04:06 WARNING dedupe key recomputed for 118 rows\n11:49:35 WARNING watermark advanced to 2026-02-14T03:00:0...\n15:37:15 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n00:56:16 WARNING COPY finished in 9.4 s\n19:57:47 INFO    dedupe key recomputed for 118 rows\n15:41:48 INFO    batch committed, rows written 4987\n05:50:55 DEBUG   shard reader lagging by 42 s\n12:21:54 INFO    batch committed, rows written 4987\n22:32:06 INFO    watermark advanced to 2026-02-14T03:00:0...\n16:47:59 INFO    watermark advanced to 2026-02-14T03:00:0...\n02:08:09 DEBUG   dedupe key recomputed for 118 rows\n13:43:52 INFO    watermark advanced to 2026-02-14T03:00:0...\n02:43:04 INFO    dedupe key recomputed for 118 rows\n02:37:14 INFO    shard reader lagging by 42 s\n06:16:23 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n04:22:08 WARNING shard reader lagging by 42 s\n12:13:31 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n05:39:05 ERROR   dedupe key recomputed for 118 rows\n08:37:48 INFO    COPY finished in 9.4 s\n01:33:26 ERROR   lock acquired on analytics.order_events\n02:58:04 INFO    COPY finished in 9.4 s\n21:36:57 DEBUG   COPY finished in 9.4 s\n18:21:53 INFO    watermark advanced to 2026-02-14T03:00:0...\n09:03:48 DEBUG   dedupe key recomputed for 118 rows\n03:49:41 INFO    watermark advanced to 2026-02-14T03:00:0...\n18:28:52 INFO    batch committed, rows written 4987\n04:35:56 ERROR   COPY finished in 9.4 s\n20:27:24 INFO    watermark advanced to 2026-02-14T03:00:0...\n23:46:49 INFO    COPY finished in 9.4 s\n07:33:12 WARNING dedupe key recomputed for 118 rows\n02:03:46 WARNING dedupe key recomputed for 118 rows\n01:07:37 INFO    shard reader lagging by 42 s\n08:09:19 ERROR   batch committed, rows written 4987\n08:31:17 INFO    batch committed, rows written 4987\n09:00:12 WARNING shard reader lagging by 42 s\n11:49:34 INFO    COPY finished in 9.4 s\n05:50:52 ERROR   watermark advanced to 2026-02-14T03:00:0...\n03:41:39 WARNING COPY finished in 9.4 s\n08:53:47 WARNING dedupe key recomputed for 118 rows\n11:44:02 DEBUG   COPY finished in 9.4 s\n20:46:04 INFO    dedupe key recomputed for 118 rows\n19:21:52 DEBUG   dedupe key recomputed for 118 rows\n20:08:14 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n08:14:57 INFO    shard reader lagging by 42 s\n02:11:45 WARNING COPY finished in 9.4 s\n21:05:16 WARNING dedupe key recomputed for 118 rows\n16:25:39 INFO    dedupe key recomputed for 118 rows\n18:01:36 INFO    COPY finished in 9.4 s\n12:39:29 INFO    COPY finished in 9.4 s\n06:42:51 INFO    watermark advanced to 2026-02-14T03:00:0...\n04:57:10 INFO    watermark advanced to 2026-02-14T03:00:0...\n10:25:26 WARNING watermark advanced to 2026-02-14T03:00:0...\n03:33:38 WARNING COPY finished in 9.4 s\n02:57:26 INFO    lock acquired on analytics.order_events\n22:37:38 DEBUG   dedupe key recomputed for 118 rows\n08:45:22 INFO    watermark advanced to 2026-02-14T03:00:0...\n13:34:52 INFO    watermark advanced to 2026-02-14T03:00:0...\n00:37:06 DEBUG   COPY finished in 9.4 s\n02:42:46 DEBUG   dedupe key recomputed for 118 rows\n00:12:06 INFO    shard reader lagging by 42 s\n21:19:20 INFO    shard reader lagging by 42 s\n12:44:15 WARNING watermark advanced to 2026-02-14T03:00:0...\n22:30:57 INFO    watermark advanced to 2026-02-14T03:00:0...\n16:39:42 DEBUG   lock acquired on analytics.order_events\n01:07:39 INFO    batch committed, rows written 4987\n06:04:16 WARNING dedupe key recomputed for 118 rows\n01:58:50 WARNING dedupe key recomputed for 118 rows\n16:47:39 WARNING watermark advanced to 2026-02-14T03:00:0...\n03:56:52 DEBUG   lock acquired on analytics.order_events\n21:39:29 INFO    lock acquired on analytics.order_events\n14:15:12 INFO    batch committed, rows written 4987\n15:50:35 INFO    dedupe key recomputed for 118 rows\n11:54:08 INFO    watermark advanced to 2026-02-14T03:00:0...\n18:46:56 INFO    watermark advanced to 2026-02-14T03:00:0...\n08:11:13 INFO    dedupe key recomputed for 118 rows\n08:57:43 WARNING dedupe key recomputed for 118 rows\n08:31:36 WARNING batch committed, rows written 4987\n09:19:22 WARNING lock acquired on analytics.order_events\n12:08:32 ERROR   batch committed, rows written 4987\n09:03:21 DEBUG   shard reader lagging by 42 s\n05:00:49 WARNING shard reader lagging by 42 s\n14:53:11 INFO    batch committed, rows written 4987\n07:04:34 ERROR   batch committed, rows written 4987\n04:38:31 INFO    COPY finished in 9.4 s\n06:13:51 ERROR   shard reader lagging by 42 s\n04:26:20 WARNING dedupe key recomputed for 118 rows\n03:33:46 ERROR   lock acquired on analytics.order_events\n07:13:13 WARNING batch committed, rows written 4987\n15:25:41 INFO    shard reader lagging by 42 s\n06:52:14 WARNING watermark advanced to 2026-02-14T03:00:0...\n19:26:40 INFO    COPY finished in 9.4 s\n18:51:13 WARNING batch committed, rows written 4987\n12:40:55 WARNING dedupe key recomputed for 118 rows\n16:26:06 DEBUG   shard reader lagging by 42 s\n09:49:34 DEBUG   batch committed, rows written 4987\n15:59:01 INFO    COPY finished in 9.4 s\n22:19:57 INFO    watermark advanced to 2026-02-14T03:00:0...\n04:02:17 DEBUG   shard reader lagging by 42 s\n10:12:44 INFO    lock acquired on analytics.order_events\n08:42:52 ERROR   dedupe key recomputed for 118 rows\n19:32:16 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n17:46:48 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n06:08:02 INFO    shard reader lagging by 42 s\n17:22:50 ERROR   dedupe key recomputed for 118 rows\n09:07:14 DEBUG   shard reader lagging by 42 s\n17:15:58 INFO    COPY finished in 9.4 s\n01:18:19 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n03:55:02 WARNING lock acquired on analytics.order_events\n06:23:53 ERROR   dedupe key recomputed for 118 rows\n00:11:04 DEBUG   COPY finished in 9.4 s\n19:50:46 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n00:46:52 DEBUG   lock acquired on analytics.order_events\n05:27:48 DEBUG   batch committed, rows written 4987\n20:37:29 WARNING watermark advanced to 2026-02-14T03:00:0...\n17:31:13 INFO    shard reader lagging by 42 s\n22:28:41 INFO    shard reader lagging by 42 s\n16:42:30 WARNING COPY finished in 9.4 s\n22:26:14 WARNING lock acquired on analytics.order_events\n08:47:19 DEBUG   shard reader lagging by 42 s\n13:05:41 ERROR   shard reader lagging by 42 s\n05:19:20 DEBUG   shard reader lagging by 42 s\n08:48:30 ERROR   batch committed, rows written 4987\n16:17:35 ERROR   shard reader lagging by 42 s\n04:23:20 INFO    lock acquired on analytics.order_events\n18:15:43 INFO    batch committed, rows written 4987\n19:33:05 INFO    watermark advanced to 2026-02-14T03:00:0...\n20:17:54 ERROR   watermark advanced to 2026-02-14T03:00:0...\n02:47:50 ERROR   watermark advanced to 2026-02-14T03:00:0...\n18:33:45 INFO    COPY finished in 9.4 s\n21:40:17 INFO    batch committed, rows written 4987\n10:05:54 DEBUG   lock acquired on analytics.order_events\n01:50:51 INFO    COPY finished in 9.4 s\n12:33:01 INFO    batch committed, rows written 4987\n16:04:29 DEBUG   batch committed, rows written 4987\n05:12:23 ERROR   dedupe key recomputed for 118 rows\n04:22:08 WARNING COPY finished in 9.4 s\n12:22:16 ERROR   lock acquired on analytics.order_events\n18:50:44 INFO    dedupe key recomputed for 118 rows\n09:29:30 WARNING dedupe key recomputed for 118 rows\n03:04:42 ERROR   watermark advanced to 2026-02-14T03:00:0...\n19:44:17 INFO    shard reader lagging by 42 s\n21:21:08 INFO    dedupe key recomputed for 118 rows\n21:51:28 ERROR   shard reader lagging by 42 s\n13:17:40 WARNING COPY finished in 9.4 s\n12:07:09 ERROR   lock acquired on analytics.order_events\n01:19:26 INFO    lock acquired on analytics.order_events\n17:47:45 WARNING shard reader lagging by 42 s\n18:31:52 INFO    COPY finished in 9.4 s\n20:15:47 INFO    batch committed, rows written 4987\n12:03:59 INFO    dedupe key recomputed for 118 rows\n21:31:21 DEBUG   batch committed, rows written 4987\n11:39:59 DEBUG   dedupe key recomputed for 118 rows\n10:38:26 WARNING batch committed, rows written 4987\n02:51:09 WARNING batch committed, rows written 4987\n09:19:43 INFO    watermark advanced to 2026-02-14T03:00:0...\n19:28:38 INFO    watermark advanced to 2026-02-14T03:00:0...\n07:56:09 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n16:43:17 INFO    COPY finished in 9.4 s\n01:22:43 DEBUG   lock acquired on analytics.order_events\n19:06:21 DEBUG   batch committed, rows written 4987\n09:44:06 WARNING watermark advanced to 2026-02-14T03:00:0...\n18:24:09 WARNING lock acquired on analytics.order_events\n01:21:03 DEBUG   lock acquired on analytics.order_events\n05:27:18 INFO    watermark advanced to 2026-02-14T03:00:0...\n20:36:40 WARNING watermark advanced to 2026-02-14T03:00:0...\n00:19:21 INFO    COPY finished in 9.4 s\n18:48:21 DEBUG   shard reader lagging by 42 s\n09:18:11 ERROR   lock acquired on analytics.order_events\n08:49:10 ERROR   COPY finished in 9.4 s\n18:01:56 WARNING dedupe key recomputed for 118 rows\n14:37:43 ERROR   COPY finished in 9.4 s\n00:59:54 INFO    lock acquired on analytics.order_events\n05:02:06 INFO    watermark advanced to 2026-02-14T03:00:0...\n10:08:49 INFO    dedupe key recomputed for 118 rows\n09:40:59 ERROR   watermark advanced to 2026-02-14T03:00:0...\n03:57:08 DEBUG   COPY finished in 9.4 s\n15:02:00 INFO    shard reader lagging by 42 s\n17:24:36 WARNING lock acquired on analytics.order_events\n19:04:19 DEBUG   lock acquired on analytics.order_events\n17:35:23 INFO    batch committed, rows written 4987\n04:18:03 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n18:24:31 INFO    batch committed, rows written 4987\n09:19:52 DEBUG   dedupe key recomputed for 118 rows\n16:05:48 INFO    shard reader lagging by 42 s\n20:44:13 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n05:30:50 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n03:36:00 INFO    watermark advanced to 2026-02-14T03:00:0...\n18:20:40 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n04:26:38 DEBUG   batch committed, rows written 4987\n04:59:28 WARNING shard reader lagging by 42 s\n16:04:35 ERROR   shard reader lagging by 42 s\n13:48:12 INFO    watermark advanced to 2026-02-14T03:00:0...\n09:16:33 WARNING shard reader lagging by 42 s\n10:59:11 ERROR   dedupe key recomputed for 118 rows\n00:42:57 INFO    batch committed, rows written 4987\n17:49:21 INFO    dedupe key recomputed for 118 rows\n23:05:10 INFO    shard reader lagging by 42 s\n05:56:13 DEBUG   dedupe key recomputed for 118 rows\n13:50:55 ERROR   shard reader lagging by 42 s\n15:40:02 DEBUG   COPY finished in 9.4 s\n07:16:39 WARNING COPY finished in 9.4 s\n21:47:45 INFO    dedupe key recomputed for 118 rows\n11:27:56 INFO    lock acquired on analytics.order_events\n21:59:47 ERROR   shard reader lagging by 42 s\n05:19:40 ERROR   watermark advanced to 2026-02-14T03:00:0...\n16:30:46 ERROR   COPY finished in 9.4 s\n04:37:11 INFO    batch committed, rows written 4987\n03:10:20 WARNING batch committed, rows written 4987\n23:21:11 INFO    dedupe key recomputed for 118 rows\n18:09:46 ERROR   shard reader lagging by 42 s\n05:39:09 WARNING dedupe key recomputed for 118 rows\n14:23:13 WARNING watermark advanced to 2026-02-14T03:00:0...\n11:23:23 ERROR   dedupe key recomputed for 118 rows\n14:57:21 INFO    batch committed, rows written 4987\n08:33:45 INFO    lock acquired on analytics.order_events\n05:15:47 DEBUG   shard reader lagging by 42 s\n13:59:54 INFO    watermark advanced to 2026-02-14T03:00:0...\n22:40:59 INFO    lock acquired on analytics.order_events\n16:07:57 ERROR   COPY finished in 9.4 s\n15:52:56 WARNING shard reader lagging by 42 s\n20:13:17 INFO    shard reader lagging by 42 s\n04:56:34 INFO    batch committed, rows written 4987\n02:35:11 WARNING batch committed, rows written 4987\n03:42:48 ERROR   watermark advanced to 2026-02-14T03:00:0...\n12:29:14 ERROR   shard reader lagging by 42 s\n01:50:56 ERROR   shard reader lagging by 42 s\n01:16:51 DEBUG   COPY finished in 9.4 s\n20:41:27 INFO    COPY finished in 9.4 s\n13:28:47 INFO    COPY finished in 9.4 s\n08:55:44 ERROR   watermark advanced to 2026-02-14T03:00:0...\n17:27:55 DEBUG   COPY finished in 9.4 s\n05:40:03 ERROR   COPY finished in 9.4 s\n03:17:37 WARNING dedupe key recomputed for 118 rows\n17:15:13 INFO    batch committed, rows written 4987\n07:51:08 INFO    batch committed, rows written 4987\n16:08:35 WARNING lock acquired on analytics.order_events\n19:31:31 INFO    watermark advanced to 2026-02-14T03:00:0...\n12:12:32 WARNING batch committed, rows written 4987\n14:27:47 INFO    shard reader lagging by 42 s\n08:59:25 INFO    lock acquired on analytics.order_events\n03:58:14 INFO    dedupe key recomputed for 118 rows\n10:06:53 INFO    COPY finished in 9.4 s\n09:14:02 WARNING dedupe key recomputed for 118 rows\n11:54:54 WARNING watermark advanced to 2026-02-14T03:00:0...\n19:09:18 DEBUG   shard reader lagging by 42 s\n17:37:03 INFO    dedupe key recomputed for 118 rows\n17:53:30 DEBUG   COPY finished in 9.4 s\n08:45:50 WARNING shard reader lagging by 42 s\n10:08:43 ERROR   COPY finished in 9.4 s\n07:06:35 INFO    COPY finished in 9.4 s\n13:07:40 INFO    batch committed, rows written 4987\n22:28:46 INFO    lock acquired on analytics.order_events\n13:36:15 ERROR   lock acquired on analytics.order_events\n10:45:15 ERROR   watermark advanced to 2026-02-14T03:00:0...\n03:51:21 INFO    shard reader lagging by 42 s\n08:57:54 INFO    lock acquired on analytics.order_events\n11:32:16 ERROR   watermark advanced to 2026-02-14T03:00:0...\n10:42:24 INFO    shard reader lagging by 42 s\n15:19:16 WARNING dedupe key recomputed for 118 rows\n22:21:47 INFO    shard reader lagging by 42 s\n20:19:28 WARNING watermark advanced to 2026-02-14T03:00:0...\n13:35:48 ERROR   batch committed, rows written 4987\n20:40:26 INFO    lock acquired on analytics.order_events\n14:48:47 WARNING COPY finished in 9.4 s\n07:10:19 INFO    dedupe key recomputed for 118 rows\n22:07:51 ERROR   batch committed, rows written 4987\n12:28:41 WARNING batch committed, rows written 4987\n06:51:58 DEBUG   dedupe key recomputed for 118 rows\n00:10:15 ERROR   watermark advanced to 2026-02-14T03:00:0...\n16:12:16 DEBUG   dedupe key recomputed for 118 rows\n04:59:23 DEBUG   lock acquired on analytics.order_events\n22:24:56 WARNING batch committed, rows written 4987\n13:18:21 INFO    shard reader lagging by 42 s\n01:04:06 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n23:06:12 ERROR   batch committed, rows written 4987\n12:18:58 WARNING lock acquired on analytics.order_events\n22:32:25 INFO    lock acquired on analytics.order_events\n11:47:02 INFO    shard reader lagging by 42 s\n08:04:42 WARNING batch committed, rows written 4987\n03:17:12 DEBUG   dedupe key recomputed for 118 rows\n17:16:53 INFO    watermark advanced to 2026-02-14T03:00:0...\n15:24:19 INFO    shard reader lagging by 42 s\n12:27:49 DEBUG   dedupe key recomputed for 118 rows\n18:18:28 ERROR   batch committed, rows written 4987\n16:20:29 INFO    COPY finished in 9.4 s\n09:35:53 INFO    watermark advanced to 2026-02-14T03:00:0...\n07:08:36 ERROR   batch committed, rows written 4987\n18:43:27 INFO    COPY finished in 9.4 s\n21:50:55 WARNING dedupe key recomputed for 118 rows\n23:55:26 DEBUG   dedupe key recomputed for 118 rows\n09:19:20 INFO    lock acquired on analytics.order_events\n13:52:56 INFO    lock acquired on analytics.order_events\n15:31:15 DEBUG   lock acquired on analytics.order_events\n03:49:05 ERROR   batch committed, rows written 4987\n05:27:09 DEBUG   dedupe key recomputed for 118 rows\n08:15:09 WARNING shard reader lagging by 42 s\n13:24:43 INFO    COPY finished in 9.4 s\n09:18:06 DEBUG   dedupe key recomputed for 118 rows\n02:54:49 DEBUG   shard reader lagging by 42 s\n08:59:10 WARNING watermark advanced to 2026-02-14T03:00:0...\n14:00:43 INFO    watermark advanced to 2026-02-14T03:00:0...\n17:01:45 INFO    lock acquired on analytics.order_events\n11:15:28 ERROR   shard reader lagging by 42 s\n06:08:19 ERROR   COPY finished in 9.4 s\n05:11:42 ERROR   shard reader lagging by 42 s\n03:43:50 INFO    watermark advanced to 2026-02-14T03:00:0...\n07:31:08 INFO    batch committed, rows written 4987\n05:06:08 WARNING dedupe key recomputed for 118 rows\n12:14:58 DEBUG   COPY finished in 9.4 s\n23:09:25 ERROR   shard reader lagging by 42 s\n14:20:45 WARNING watermark advanced to 2026-02-14T03:00:0...\n21:48:33 WARNING lock acquired on analytics.order_events\n17:44:14 ERROR   watermark advanced to 2026-02-14T03:00:0...\n01:19:51 INFO    shard reader lagging by 42 s\n09:46:43 WARNING dedupe key recomputed for 118 rows\n06:43:41 ERROR   dedupe key recomputed for 118 rows\n09:07:08 INFO    lock acquired on analytics.order_events\n14:34:16 INFO    batch committed, rows written 4987\n14:47:19 INFO    shard reader lagging by 42 s\n17:36:46 ERROR   watermark advanced to 2026-02-14T03:00:0...\n02:19:36 INFO    dedupe key recomputed for 118 rows\n06:15:01 WARNING batch committed, rows written 4987\n13:56:00 INFO    watermark advanced to 2026-02-14T03:00:0...\n13:26:15 INFO    batch committed, rows written 4987\n23:10:31 INFO    COPY finished in 9.4 s\n05:11:35 ERROR   batch committed, rows written 4987\n20:21:02 INFO    COPY finished in 9.4 s\n18:00:11 INFO    COPY finished in 9.4 s\n02:49:14 INFO    shard reader lagging by 42 s\n16:38:22 INFO    watermark advanced to 2026-02-14T03:00:0...\n11:23:35 INFO    batch committed, rows written 4987\n14:59:06 DEBUG   lock acquired on analytics.order_events\n04:23:31 INFO    lock acquired on analytics.order_events\n17:34:31 INFO    watermark advanced to 2026-02-14T03:00:0...\n21:05:35 INFO    lock acquired on analytics.order_events\n10:05:00 INFO    COPY finished in 9.4 s\n21:26:13 INFO    lock acquired on analytics.order_events\n07:37:27 INFO    lock acquired on analytics.order_events\n09:45:19 DEBUG   dedupe key recomputed for 118 rows\n00:17:59 DEBUG   dedupe key recomputed for 118 rows\n16:32:58 WARNING watermark advanced to 2026-02-14T03:00:0...\n04:36:04 WARNING batch committed, rows written 4987\n03:10:01 WARNING lock acquired on analytics.order_events\n20:00:36 WARNING shard reader lagging by 42 s\n16:26:53 WARNING watermark advanced to 2026-02-14T03:00:0...\n14:25:04 ERROR   COPY finished in 9.4 s\n14:22:03 ERROR   shard reader lagging by 42 s\n20:06:53 ERROR   dedupe key recomputed for 118 rows\n02:45:23 INFO    shard reader lagging by 42 s\n17:40:35 DEBUG   lock acquired on analytics.order_events\n16:39:09 DEBUG   batch committed, rows written 4987\n18:43:09 ERROR   shard reader lagging by 42 s\n16:12:33 ERROR   batch committed, rows written 4987\n12:13:40 WARNING batch committed, rows written 4987\n06:44:48 ERROR   watermark advanced to 2026-02-14T03:00:0...\n10:12:46 INFO    watermark advanced to 2026-02-14T03:00:0...\n11:30:54 DEBUG   shard reader lagging by 42 s\n15:41:22 WARNING lock acquired on analytics.order_events\n20:58:03 INFO    lock acquired on analytics.order_events\n20:24:57 ERROR   dedupe key recomputed for 118 rows\n20:20:15 INFO    shard reader lagging by 42 s\n08:55:40 WARNING watermark advanced to 2026-02-14T03:00:0...\n14:00:03 ERROR   COPY finished in 9.4 s\n12:14:17 WARNING shard reader lagging by 42 s\n03:51:20 INFO    batch committed, rows written 4987\n16:14:50 WARNING shard reader lagging by 42 s\n13:04:14 INFO    shard reader lagging by 42 s\n19:34:31 DEBUG   batch committed, rows written 4987\n14:05:38 INFO    dedupe key recomputed for 118 rows\n14:24:35 ERROR   watermark advanced to 2026-02-14T03:00:0...\n13:06:57 DEBUG   shard reader lagging by 42 s\n22:20:23 INFO    batch committed, rows written 4987\n06:36:24 INFO    lock acquired on analytics.order_events\n17:29:14 ERROR   dedupe key recomputed for 118 rows\n13:36:05 INFO    COPY finished in 9.4 s\n22:08:24 ERROR   shard reader lagging by 42 s\n15:57:22 INFO    COPY finished in 9.4 s\n18:48:10 WARNING lock acquired on analytics.order_events\n01:34:41 WARNING lock acquired on analytics.order_events\n13:18:40 WARNING shard reader lagging by 42 s\n07:51:30 INFO    COPY finished in 9.4 s\n01:54:10 WARNING COPY finished in 9.4 s\n22:19:37 INFO    COPY finished in 9.4 s\n20:18:50 WARNING shard reader lagging by 42 s\n16:53:54 WARNING lock acquired on analytics.order_events\n03:46:44 ERROR   shard reader lagging by 42 s\n00:04:49 ERROR   batch committed, rows written 4987\n18:23:50 INFO    COPY finished in 9.4 s\n03:12:44 WARNING watermark advanced to 2026-02-14T03:00:0...\n22:22:38 ERROR   shard reader lagging by 42 s\n23:36:25 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n20:31:58 INFO    COPY finished in 9.4 s\n13:59:49 ERROR   dedupe key recomputed for 118 rows\n18:15:14 DEBUG   lock acquired on analytics.order_events\n14:08:31 DEBUG   COPY finished in 9.4 s\n09:41:23 ERROR   dedupe key recomputed for 118 rows\n09:33:30 WARNING watermark advanced to 2026-02-14T03:00:0...\n11:38:05 DEBUG   COPY finished in 9.4 s\n08:02:19 INFO    shard reader lagging by 42 s\n00:30:26 DEBUG   shard reader lagging by 42 s\n15:09:56 INFO    watermark advanced to 2026-02-14T03:00:0...\n07:31:08 INFO    COPY finished in 9.4 s\n04:13:30 INFO    dedupe key recomputed for 118 rows\n22:02:21 ERROR   batch committed, rows written 4987\n01:44:55 INFO    dedupe key recomputed for 118 rows\n07:17:19 ERROR   COPY finished in 9.4 s\n02:50:46 INFO    batch committed, rows written 4987\n17:46:06 DEBUG   shard reader lagging by 42 s\n05:49:28 INFO    batch committed, rows written 4987\n23:48:34 INFO    COPY finished in 9.4 s\n22:56:24 WARNING watermark advanced to 2026-02-14T03:00:0...\n23:23:24 INFO    lock acquired on analytics.order_events\n21:05:32 WARNING shard reader lagging by 42 s\n01:00:32 INFO    batch committed, rows written 4987\n16:12:33 WARNING lock acquired on analytics.order_events\n16:40:11 INFO    lock acquired on analytics.order_events\n20:26:51 DEBUG   batch committed, rows written 4987\n23:14:55 ERROR   COPY finished in 9.4 s\n23:35:00 INFO    watermark advanced to 2026-02-14T03:00:0...\n11:57:16 WARNING COPY finished in 9.4 s\n04:28:13 INFO    batch committed, rows written 4987\n06:34:55 WARNING COPY finished in 9.4 s\n16:22:50 DEBUG   shard reader lagging by 42 s\n02:18:25 INFO    dedupe key recomputed for 118 rows\n04:34:43 DEBUG   dedupe key recomputed for 118 rows\n04:03:03 ERROR   dedupe key recomputed for 118 rows\n07:49:57 WARNING dedupe key recomputed for 118 rows\n09:31:27 WARNING batch committed, rows written 4987\n22:32:43 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n12:45:18 DEBUG   dedupe key recomputed for 118 rows\n01:21:15 DEBUG   lock acquired on analytics.order_events\n13:13:30 ERROR   COPY finished in 9.4 s\n13:36:15 ERROR   watermark advanced to 2026-02-14T03:00:0...\n13:24:18 INFO    dedupe key recomputed for 118 rows\n02:25:32 INFO    batch committed, rows written 4987\n03:51:48 WARNING watermark advanced to 2026-02-14T03:00:0...\n02:24:07 INFO    batch committed, rows written 4987\n03:37:01 INFO    COPY finished in 9.4 s\n22:01:03 INFO    watermark advanced to 2026-02-14T03:00:0...\n02:18:08 INFO    batch committed, rows written 4987\n03:28:16 ERROR   dedupe key recomputed for 118 rows\n11:13:03 DEBUG   lock acquired on analytics.order_events\n16:41:28 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n05:28:38 ERROR   dedupe key recomputed for 118 rows\n13:54:45 DEBUG   shard reader lagging by 42 s\n03:27:24 INFO    batch committed, rows written 4987\n22:36:53 INFO    lock acquired on analytics.order_events\n18:23:29 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n23:51:50 WARNING watermark advanced to 2026-02-14T03:00:0...\n00:19:37 INFO    dedupe key recomputed for 118 rows\n12:34:42 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n17:46:03 WARNING batch committed, rows written 4987\n23:15:22 INFO    dedupe key recomputed for 118 rows\n06:59:32 INFO    watermark advanced to 2026-02-14T03:00:0...\n02:28:35 WARNING COPY finished in 9.4 s\n07:27:22 ERROR   COPY finished in 9.4 s\n04:33:24 INFO    watermark advanced to 2026-02-14T03:00:0...\n10:19:59 WARNING shard reader lagging by 42 s\n12:10:16 ERROR   COPY finished in 9.4 s\n17:05:43 ERROR   dedupe key recomputed for 118 rows\n10:59:21 WARNING lock acquired on analytics.order_events\n05:40:19 INFO    batch committed, rows written 4987\n08:00:41 INFO    shard reader lagging by 42 s\n02:02:50 ERROR   watermark advanced to 2026-02-14T03:00:0...\n03:33:10 INFO    COPY finished in 9.4 s\n02:46:31 INFO    dedupe key recomputed for 118 rows\n19:50:45 DEBUG   lock acquired on analytics.order_events\n23:25:01 WARNING lock acquired on analytics.order_events\n19:57:10 WARNING lock acquired on analytics.order_events\n20:23:30 WARNING batch committed, rows written 4987\n07:52:41 WARNING watermark advanced to 2026-02-14T03:00:0...\n18:12:07 ERROR   lock acquired on analytics.order_events\n17:20:49 INFO    dedupe key recomputed for 118 rows\n22:04:18 INFO    shard reader lagging by 42 s\n07:43:31 WARNING batch committed, rows written 4987\n00:59:35 INFO    COPY finished in 9.4 s\n14:58:24 WARNING lock acquired on analytics.order_events\n14:08:50 DEBUG   lock acquired on analytics.order_events\n13:53:02 INFO    lock acquired on analytics.order_events\n11:36:24 DEBUG   COPY finished in 9.4 s\n21:42:06 INFO    lock acquired on analytics.order_events\n00:01:36 INFO    watermark advanced to 2026-02-14T03:00:0...\n19:42:58 DEBUG   dedupe key recomputed for 118 rows\n00:19:21 ERROR   COPY finished in 9.4 s\n20:28:52 WARNING dedupe key recomputed for 118 rows\n01:19:19 ERROR   watermark advanced to 2026-02-14T03:00:0...\n04:30:26 ERROR   lock acquired on analytics.order_events\n08:43:43 INFO    COPY finished in 9.4 s\n16:04:07 WARNING watermark advanced to 2026-02-14T03:00:0...\n04:59:48 INFO    lock acquired on analytics.order_events\n20:01:17 INFO    batch committed, rows written 4987\n16:31:36 DEBUG   batch committed, rows written 4987\n16:13:25 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n02:35:16 INFO    COPY finished in 9.4 s\n05:19:15 DEBUG   shard reader lagging by 42 s\n16:46:20 WARNING lock acquired on analytics.order_events\n07:29:51 WARNING dedupe key recomputed for 118 rows\n00:43:31 INFO    shard reader lagging by 42 s\n01:21:42 DEBUG   lock acquired on analytics.order_events\n09:30:26 WARNING dedupe key recomputed for 118 rows\n03:32:45 ERROR   batch committed, rows written 4987\n17:16:21 INFO    shard reader lagging by 42 s\n11:15:59 WARNING watermark advanced to 2026-02-14T03:00:0...\n11:44:20 WARNING batch committed, rows written 4987\n21:13:43 INFO    shard reader lagging by 42 s\n11:21:48 INFO    watermark advanced to 2026-02-14T03:00:0...\n14:56:33 DEBUG   lock acquired on analytics.order_events\n08:00:29 INFO    lock acquired on analytics.order_events\n02:13:56 DEBUG   lock acquired on analytics.order_events\n06:03:38 DEBUG   lock acquired on analytics.order_events\n17:48:38 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n11:30:37 INFO    dedupe key recomputed for 118 rows\n01:51:31 DEBUG   batch committed, rows written 4987\n20:38:11 DEBUG   lock acquired on analytics.order_events\n05:06:04 INFO    shard reader lagging by 42 s\n08:01:40 INFO    batch committed, rows written 4987\n03:26:48 INFO    batch committed, rows written 4987\n14:46:35 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n10:40:01 ERROR   shard reader lagging by 42 s\n19:10:16 INFO    shard reader lagging by 42 s\n06:14:31 ERROR   lock acquired on analytics.order_events\n13:08:40 ERROR   lock acquired on analytics.order_events\n12:20:13 WARNING shard reader lagging by 42 s\n12:26:19 INFO    COPY finished in 9.4 s\n06:55:06 INFO    lock acquired on analytics.order_events\n08:02:32 INFO    watermark advanced to 2026-02-14T03:00:0...\n05:02:38 WARNING dedupe key recomputed for 118 rows\n15:41:24 WARNING lock acquired on analytics.order_events\n13:16:48 INFO    shard reader lagging by 42 s\n00:17:03 INFO    watermark advanced to 2026-02-14T03:00:0...\n07:23:15 WARNING watermark advanced to 2026-02-14T03:00:0...\n12:34:04 WARNING batch committed, rows written 4987\n04:00:14 INFO    lock acquired on analytics.order_events\n20:18:32 WARNING watermark advanced to 2026-02-14T03:00:0...\n14:32:20 WARNING COPY finished in 9.4 s\n01:43:16 WARNING batch committed, rows written 4987\n06:55:16 INFO    dedupe key recomputed for 118 rows\n23:55:43 WARNING lock acquired on analytics.order_events\n09:11:35 INFO    COPY finished in 9.4 s\n13:46:50 ERROR   watermark advanced to 2026-02-14T03:00:0...\n10:58:21 INFO    COPY finished in 9.4 s\n06:08:48 INFO    dedupe key recomputed for 118 rows\n07:11:52 INFO    COPY finished in 9.4 s\n23:58:17 INFO    watermark advanced to 2026-02-14T03:00:0...\n21:19:54 INFO    batch committed, rows written 4987\n05:05:55 ERROR   COPY finished in 9.4 s\n19:56:08 INFO    lock acquired on analytics.order_events\n01:18:13 DEBUG   COPY finished in 9.4 s\n03:30:55 INFO    watermark advanced to 2026-02-14T03:00:0...\n06:17:46 DEBUG   batch committed, rows written 4987\n01:12:41 DEBUG   COPY finished in 9.4 s\n10:24:02 INFO    dedupe key recomputed for 118 rows\n20:28:20 INFO    shard reader lagging by 42 s\n15:28:47 INFO    shard reader lagging by 42 s\n02:38:22 INFO    dedupe key recomputed for 118 rows\n22:14:28 WARNING dedupe key recomputed for 118 rows\n04:45:17 INFO    shard reader lagging by 42 s\n05:25:35 DEBUG   dedupe key recomputed for 118 rows\n18:37:20 ERROR   COPY finished in 9.4 s\n02:58:30 DEBUG   lock acquired on analytics.order_events\n15:12:09 WARNING batch committed, rows written 4987\n02:23:53 ERROR   dedupe key recomputed for 118 rows\n22:43:18 INFO    shard reader lagging by 42 s\n03:30:57 WARNING COPY finished in 9.4 s\n06:48:19 ERROR   lock acquired on analytics.order_events\n07:42:58 INFO    watermark advanced to 2026-02-14T03:00:0...\n08:00:44 ERROR   batch committed, rows written 4987\n13:06:27 INFO    batch committed, rows written 4987\n09:50:59 INFO    dedupe key recomputed for 118 rows\n13:02:43 WARNING shard reader lagging by 42 s\n03:16:26 ERROR   shard reader lagging by 42 s\n07:09:13 INFO    batch committed, rows written 4987\n02:10:25 INFO    watermark advanced to 2026-02-14T03:00:0...\n06:02:35 ERROR   dedupe key recomputed for 118 rows\n06:55:17 INFO    watermark advanced to 2026-02-14T03:00:0...\n14:39:55 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n22:18:41 INFO    shard reader lagging by 42 s\n12:34:10 DEBUG   COPY finished in 9.4 s\n13:26:39 WARNING dedupe key recomputed for 118 rows\n21:26:09 INFO    lock acquired on analytics.order_events\n09:15:36 WARNING batch committed, rows written 4987\n07:38:03 INFO    dedupe key recomputed for 118 rows\n02:07:41 ERROR   COPY finished in 9.4 s\n15:49:17 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n14:36:54 DEBUG   dedupe key recomputed for 118 rows\n15:43:55 INFO    COPY finished in 9.4 s\n18:02:36 INFO    COPY finished in 9.4 s\n09:33:53 INFO    batch committed, rows written 4987\n14:39:07 ERROR   COPY finished in 9.4 s\n09:40:24 ERROR   batch committed, rows written 4987\n03:19:15 INFO    shard reader lagging by 42 s\n20:31:36 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n19:40:14 DEBUG   dedupe key recomputed for 118 rows\n07:47:47 INFO    shard reader lagging by 42 s\nTraceback (most recent call last):\n  File \"migrations/20260214_003_split_order_events.sql\", ...\n  File \"pipelines/order_events/load.py\", line 112, in sha...\n  File \"migrations/20260214_003_split_order_events.sql\", ...\n  File \"migrations/20260214_003_split_order_events.sql\", ...\nAssertionError: The migration adds a column with a defaul...\n17:40:15 WARNING COPY finished in 9.4 s\n02:03:55 WARNING lock acquired on analytics.order_events\n10:50:26 WARNING watermark advanced to 2026-02-14T03:00:0...\n19:49:50 INFO    dedupe key recomputed for 118 rows\n06:10:41 WARNING shard reader lagging by 42 s\n02:00:12 DEBUG   shard reader lagging by 42 s\n06:13:00 ERROR   dedupe key recomputed for 118 rows\n13:12:03 DEBUG   dedupe key recomputed for 118 rows\n20:12:22 INFO    watermark advanced to 2026-02-14T03:00:0...\n03:52:04 ERROR   shard reader lagging by 42 s\n19:40:34 INFO    COPY finished in 9.4 s\n15:36:17 INFO    watermark advanced to 2026-02-14T03:00:0...\n00:42:19 WARNING COPY finished in 9.4 s\n02:55:37 ERROR   COPY finished in 9.4 s\n20:25:35 DEBUG   shard reader lagging by 42 s\n23:00:05 INFO    watermark advanced to 2026-02-14T03:00:0...\n12:03:11 INFO    watermark advanced to 2026-02-14T03:00:0...\n15:49:26 DEBUG   dedupe key recomputed for 118 rows\n13:36:34 INFO    dedupe key recomputed for 118 rows\n00:39:42 ERROR   dedupe key recomputed for 118 rows\n19:40:04 DEBUG   COPY finished in 9.4 s\n22:06:31 DEBUG   dedupe key recomputed for 118 rows\n01:21:36 INFO    batch committed, rows written 4987\n13:59:02 WARNING lock acquired on analytics.order_events\n19:39:01 WARNING batch committed, rows written 4987\n01:01:18 INFO    lock acquired on analytics.order_events\n10:33:06 WARNING dedupe key recomputed for 118 rows\n08:17:56 ERROR   watermark advanced to 2026-02-14T03:00:0...\n07:06:15 ERROR   COPY finished in 9.4 s\n16:05:47 INFO    batch committed, rows written 4987\n15:34:16 DEBUG   COPY finished in 9.4 s\n09:07:35 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n14:14:18 WARNING batch committed, rows written 4987\n12:40:15 WARNING COPY finished in 9.4 s\n08:11:54 ERROR   dedupe key recomputed for 118 rows\n15:08:38 INFO    shard reader lagging by 42 s\n14:57:12 WARNING watermark advanced to 2026-02-14T03:00:0...\n17:35:17 DEBUG   COPY finished in 9.4 s\n05:31:48 ERROR   lock acquired on analytics.order_events\n07:46:07 INFO    watermark advanced to 2026-02-14T03:00:0...\n14:24:10 INFO    watermark advanced to 2026-02-14T03:00:0...\n12:20:55 INFO    batch committed, rows written 4987\n23:15:26 DEBUG   lock acquired on analytics.order_events\n23:14:50 INFO    watermark advanced to 2026-02-14T03:00:0...\n06:51:25 INFO    batch committed, rows written 4987\n05:33:02 INFO    batch committed, rows written 4987\n10:30:33 ERROR   COPY finished in 9.4 s\n08:38:58 DEBUG   dedupe key recomputed for 118 rows\n14:42:07 WARNING shard reader lagging by 42 s\n00:21:40 INFO    watermark advanced to 2026-02-14T03:00:0...\n17:28:30 WARNING batch committed, rows written 4987\n01:26:30 WARNING batch committed, rows written 4987\n20:10:23 INFO    batch committed, rows written 4987\n20:06:02 INFO    watermark advanced to 2026-02-14T03:00:0...\n00:28:59 DEBUG   batch committed, rows written 4987\n21:22:01 DEBUG   batch committed, rows written 4987\n22:21:00 INFO    dedupe key recomputed for 118 rows\n15:16:04 DEBUG   batch committed, rows written 4987\n11:08:25 INFO    dedupe key recomputed for 118 rows\n10:40:31 WARNING lock acquired on analytics.order_events\n03:41:19 ERROR   COPY finished in 9.4 s\n21:38:35 WARNING COPY finished in 9.4 s\n14:06:34 INFO    dedupe key recomputed for 118 rows\n10:32:27 DEBUG   batch committed, rows written 4987\n18:32:30 INFO    watermark advanced to 2026-02-14T03:00:0...\n20:37:46 DEBUG   dedupe key recomputed for 118 rows\n02:16:37 DEBUG   lock acquired on analytics.order_events\n04:04:44 WARNING COPY finished in 9.4 s\n10:07:22 INFO    dedupe key recomputed for 118 rows\n15:18:40 WARNING batch committed, rows written 4987\n22:11:22 INFO    lock acquired on analytics.order_events\n18:33:42 WARNING COPY finished in 9.4 s\n13:25:27 INFO    dedupe key recomputed for 118 rows\n22:25:24 INFO    watermark advanced to 2026-02-14T03:00:0...\n12:18:47 ERROR   dedupe key recomputed for 118 rows\n22:23:13 ERROR   lock acquired on analytics.order_events\n22:03:01 WARNING batch committed, rows written 4987\n18:03:49 INFO    lock acquired on analytics.order_events\n22:53:45 WARNING lock acquired on analytics.order_events\n06:41:28 INFO    batch committed, rows written 4987\n06:54:00 INFO    shard reader lagging by 42 s\n20:39:21 INFO    COPY finished in 9.4 s\n20:35:26 INFO    shard reader lagging by 42 s\n07:59:59 WARNING lock acquired on analytics.order_events\n07:21:38 INFO    COPY finished in 9.4 s\n19:34:40 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n13:16:55 WARNING batch committed, rows written 4987\n20:19:23 INFO    lock acquired on analytics.order_events\n14:21:39 INFO    COPY finished in 9.4 s\n17:35:51 DEBUG   batch committed, rows written 4987\n17:16:14 INFO    shard reader lagging by 42 s\n10:24:58 ERROR   batch committed, rows written 4987\n11:59:35 INFO    COPY finished in 9.4 s\n11:00:36 WARNING shard reader lagging by 42 s\n06:13:59 DEBUG   batch committed, rows written 4987\n19:26:09 INFO    watermark advanced to 2026-02-14T03:00:0...\n03:44:53 ERROR   lock acquired on analytics.order_events\n11:27:55 DEBUG   batch committed, rows written 4987\n16:03:33 INFO    shard reader lagging by 42 s\n02:35:05 ERROR   watermark advanced to 2026-02-14T03:00:0...\n02:43:10 DEBUG   shard reader lagging by 42 s\n14:39:59 ERROR   shard reader lagging by 42 s\n16:29:36 WARNING COPY finished in 9.4 s\n05:29:41 DEBUG   lock acquired on analytics.order_events\n20:40:32 WARNING batch committed, rows written 4987\n05:00:45 WARNING COPY finished in 9.4 s\n04:53:32 ERROR   COPY finished in 9.4 s\n03:54:56 DEBUG   batch committed, rows written 4987\n00:54:14 WARNING watermark advanced to 2026-02-14T03:00:0...\n15:21:13 DEBUG   lock acquired on analytics.order_events\n18:59:09 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n12:37:14 DEBUG   dedupe key recomputed for 118 rows\n08:32:25 DEBUG   COPY finished in 9.4 s\n04:04:30 ERROR   shard reader lagging by 42 s\n07:54:57 ERROR   shard reader lagging by 42 s\n13:47:10 INFO    shard reader lagging by 42 s\n18:33:26 ERROR   shard reader lagging by 42 s\n04:07:43 INFO    watermark advanced to 2026-02-14T03:00:0...\n12:54:29 INFO    dedupe key recomputed for 118 rows\n00:58:16 INFO    batch committed, rows written 4987\n03:51:11 INFO    watermark advanced to 2026-02-14T03:00:0...\n23:24:11 DEBUG   shard reader lagging by 42 s\n22:57:50 INFO    lock acquired on analytics.order_events\n07:31:56 DEBUG   shard reader lagging by 42 s\n22:17:17 INFO    batch committed, rows written 4987\n16:04:13 WARNING batch committed, rows written 4987\n05:52:14 DEBUG   shard reader lagging by 42 s\n08:24:07 WARNING shard reader lagging by 42 s\n15:30:03 WARNING shard reader lagging by 42 s\n00:15:31 ERROR   watermark advanced to 2026-02-14T03:00:0...\n13:21:50 WARNING shard reader lagging by 42 s\n13:45:41 INFO    dedupe key recomputed for 118 rows\n23:05:59 WARNING lock acquired on analytics.order_events\n01:01:28 DEBUG   dedupe key recomputed for 118 rows\n06:05:30 WARNING batch committed, rows written 4987\n15:42:11 INFO    lock acquired on analytics.order_events\n10:13:58 ERROR   watermark advanced to 2026-02-14T03:00:0...\n23:18:47 ERROR   watermark advanced to 2026-02-14T03:00:0...\n07:06:18 INFO    watermark advanced to 2026-02-14T03:00:0...\n08:28:17 INFO    COPY finished in 9.4 s\n09:44:48 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n22:56:36 INFO    lock acquired on analytics.order_events\n16:52:53 ERROR   COPY finished in 9.4 s\n21:21:08 INFO    dedupe key recomputed for 118 rows\n19:36:15 INFO    shard reader lagging by 42 s\n16:37:44 ERROR   dedupe key recomputed for 118 rows\n15:16:49 INFO    batch committed, rows written 4987\n21:26:30 DEBUG   COPY finished in 9.4 s\n06:15:21 WARNING shard reader lagging by 42 s\n01:37:52 INFO    shard reader lagging by 42 s\n17:39:15 ERROR   dedupe key recomputed for 118 rows\n18:13:41 DEBUG   dedupe key recomputed for 118 rows\n01:13:40 ERROR   COPY finished in 9.4 s\n23:33:02 INFO    COPY finished in 9.4 s\n23:34:03 INFO    dedupe key recomputed for 118 rows\n07:28:27 WARNING lock acquired on analytics.order_events\n18:21:16 DEBUG   lock acquired on analytics.order_events\n06:43:41 DEBUG   batch committed, rows written 4987\n02:24:23 WARNING shard reader lagging by 42 s\n21:47:01 DEBUG   dedupe key recomputed for 118 rows\n10:10:00 DEBUG   batch committed, rows written 4987\n08:13:38 INFO    batch committed, rows written 4987\n20:33:44 INFO    watermark advanced to 2026-02-14T03:00:0...\n04:27:37 INFO    watermark advanced to 2026-02-14T03:00:0...\n03:00:59 WARNING watermark advanced to 2026-02-14T03:00:0...\n16:15:22 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n20:29:08 INFO    batch committed, rows written 4987\n13:34:49 WARNING shard reader lagging by 42 s\n05:23:33 INFO    shard reader lagging by 42 s\n00:33:57 INFO    dedupe key recomputed for 118 rows\n01:54:27 INFO    shard reader lagging by 42 s\n23:03:17 INFO    watermark advanced to 2026-02-14T03:00:0...\n02:55:22 WARNING shard reader lagging by 42 s\n13:40:13 DEBUG   dedupe key recomputed for 118 rows\n05:55:04 ERROR   COPY finished in 9.4 s\n10:12:19 WARNING batch committed, rows written 4987\n10:58:37 ERROR   batch committed, rows written 4987\n12:34:15 DEBUG   COPY finished in 9.4 s\n04:14:11 ERROR   lock acquired on analytics.order_events\n00:54:16 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n21:59:21 INFO    shard reader lagging by 42 s\n01:43:06 DEBUG   shard reader lagging by 42 s\n08:27:57 INFO    dedupe key recomputed for 118 rows\n04:21:12 DEBUG   batch committed, rows written 4987\n15:57:40 INFO    lock acquired on analytics.order_events\n16:55:08 INFO    COPY finished in 9.4 s\n01:55:53 ERROR   batch committed, rows written 4987\n09:21:41 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n23:25:24 INFO    COPY finished in 9.4 s\n03:44:17 WARNING shard reader lagging by 42 s\n13:30:22 DEBUG   COPY finished in 9.4 s\n11:18:47 INFO    dedupe key recomputed for 118 rows\n17:20:24 WARNING watermark advanced to 2026-02-14T03:00:0...\n11:19:01 ERROR   batch committed, rows written 4987\n19:33:47 WARNING shard reader lagging by 42 s\n01:23:43 DEBUG   shard reader lagging by 42 s\n20:25:19 WARNING batch committed, rows written 4987\n01:16:00 INFO    shard reader lagging by 42 s\n07:04:16 INFO    shard reader lagging by 42 s\n03:02:48 ERROR   lock acquired on analytics.order_events\n05:33:04 ERROR   COPY finished in 9.4 s\n05:23:36 DEBUG   COPY finished in 9.4 s\n12:10:17 ERROR   dedupe key recomputed for 118 rows\n03:11:33 DEBUG   COPY finished in 9.4 s\n02:47:38 INFO    batch committed, rows written 4987\n18:53:23 ERROR   dedupe key recomputed for 118 rows\n18:16:51 ERROR   shard reader lagging by 42 s\n23:17:02 INFO    shard reader lagging by 42 s\n05:51:43 DEBUG   batch committed, rows written 4987\n23:11:13 INFO    watermark advanced to 2026-02-14T03:00:0...\n15:54:57 INFO    batch committed, rows written 4987\n20:02:12 INFO    watermark advanced to 2026-02-14T03:00:0...\n19:00:39 INFO    COPY finished in 9.4 s\n15:26:44 ERROR   dedupe key recomputed for 118 rows\n16:43:55 ERROR   batch committed, rows written 4987\n20:32:03 INFO    watermark advanced to 2026-02-14T03:00:0...\n11:55:12 INFO    COPY finished in 9.4 s\n10:13:55 INFO    COPY finished in 9.4 s\n19:09:25 INFO    lock acquired on analytics.order_events\n02:00:04 ERROR   lock acquired on analytics.order_events\n09:23:55 INFO    dedupe key recomputed for 118 rows\n13:53:04 DEBUG   shard reader lagging by 42 s\n13:26:32 DEBUG   shard reader lagging by 42 s\n16:11:28 INFO    dedupe key recomputed for 118 rows\n00:55:56 WARNING lock acquired on analytics.order_events\n11:16:25 DEBUG   dedupe key recomputed for 118 rows\n22:02:13 INFO    lock acquired on analytics.order_events\n00:25:44 ERROR   COPY finished in 9.4 s\n21:55:14 INFO    lock acquired on analytics.order_events\n09:40:10 WARNING COPY finished in 9.4 s\n11:52:47 WARNING dedupe key recomputed for 118 rows\n17:35:19 INFO    shard reader lagging by 42 s\n08:34:16 INFO    watermark advanced to 2026-02-14T03:00:0...\n17:08:37 ERROR   batch committed, rows written 4987\n04:37:30 ERROR   batch committed, rows written 4987\n09:16:00 INFO    lock acquired on analytics.order_events\n10:43:11 INFO    COPY finished in 9.4 s\n05:42:47 DEBUG   lock acquired on analytics.order_events\n09:26:50 WARNING shard reader lagging by 42 s\n02:51:08 ERROR   COPY finished in 9.4 s\n07:01:43 INFO    dedupe key recomputed for 118 rows\n19:13:08 INFO    batch committed, rows written 4987\n05:19:17 ERROR   dedupe key recomputed for 118 rows\n14:46:08 ERROR   lock acquired on analytics.order_events\n22:29:30 INFO    shard reader lagging by 42 s\n10:21:55 INFO    shard reader lagging by 42 s\n02:27:49 INFO    dedupe key recomputed for 118 rows\n08:40:35 ERROR   lock acquired on analytics.order_events\n18:35:43 INFO    COPY finished in 9.4 s\n18:39:07 DEBUG   dedupe key recomputed for 118 rows\n01:28:07 WARNING dedupe key recomputed for 118 rows\n12:35:00 WARNING shard reader lagging by 42 s\n20:58:02 INFO    watermark advanced to 2026-02-14T03:00:0...\n15:39:11 ERROR   lock acquired on analytics.order_events\n19:32:30 DEBUG   COPY finished in 9.4 s\n09:39:05 DEBUG   COPY finished in 9.4 s\n13:53:20 ERROR   watermark advanced to 2026-02-14T03:00:0...\n22:26:20 WARNING batch committed, rows written 4987\n18:33:38 ERROR   dedupe key recomputed for 118 rows\n12:20:34 INFO    COPY finished in 9.4 s\n17:24:38 INFO    shard reader lagging by 42 s\n22:34:07 DEBUG   shard reader lagging by 42 s\n05:51:43 ERROR   COPY finished in 9.4 s\n20:21:14 DEBUG   lock acquired on analytics.order_events\n07:04:31 DEBUG   dedupe key recomputed for 118 rows\n02:38:54 WARNING batch committed, rows written 4987\n00:37:12 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n18:48:25 INFO    shard reader lagging by 42 s\n08:46:01 INFO    lock acquired on analytics.order_events\n11:56:37 WARNING watermark advanced to 2026-02-14T03:00:0...\n07:52:14 ERROR   dedupe key recomputed for 118 rows\n02:21:04 INFO    COPY finished in 9.4 s\n18:39:39 WARNING batch committed, rows written 4987\n15:02:50 ERROR   watermark advanced to 2026-02-14T03:00:0...\n22:10:42 INFO    batch committed, rows written 4987\n05:45:23 DEBUG   dedupe key recomputed for 118 rows\n12:56:22 INFO    batch committed, rows written 4987\n07:48:27 ERROR   lock acquired on analytics.order_events\n12:09:01 WARNING watermark advanced to 2026-02-14T03:00:0...\n22:00:52 INFO    dedupe key recomputed for 118 rows\n23:33:22 ERROR   watermark advanced to 2026-02-14T03:00:0...\n01:37:29 INFO    shard reader lagging by 42 s\n02:32:11 WARNING batch committed, rows written 4987\n12:07:41 DEBUG   dedupe key recomputed for 118 rows\n03:35:03 WARNING dedupe key recomputed for 118 rows\n18:16:08 INFO    lock acquired on analytics.order_events\n17:08:32 DEBUG   dedupe key recomputed for 118 rows\n16:53:55 INFO    lock acquired on analytics.order_events\n17:10:26 INFO    COPY finished in 9.4 s\n08:50:36 INFO    batch committed, rows written 4987\n17:00:42 INFO    shard reader lagging by 42 s\n02:32:49 DEBUG   batch committed, rows written 4987\n19:23:28 INFO    lock acquired on analytics.order_events\n03:25:42 INFO    lock acquired on analytics.order_events\n07:09:43 INFO    lock acquired on analytics.order_events\n13:16:38 ERROR   shard reader lagging by 42 s\n10:29:02 INFO    COPY finished in 9.4 s\n08:00:19 WARNING shard reader lagging by 42 s\n04:58:05 WARNING COPY finished in 9.4 s\n03:53:34 WARNING watermark advanced to 2026-02-14T03:00:0...\n17:27:55 INFO    batch committed, rows written 4987\n22:32:57 ERROR   COPY finished in 9.4 s\n20:30:44 ERROR   COPY finished in 9.4 s\n20:21:12 INFO    shard reader lagging by 42 s\n05:59:28 INFO    dedupe key recomputed for 118 rows\n23:40:58 INFO    batch committed, rows written 4987\n17:13:02 WARNING watermark advanced to 2026-02-14T03:00:0...\n02:08:15 INFO    COPY finished in 9.4 s\n03:57:41 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n14:35:47 INFO    shard reader lagging by 42 s\n23:51:35 INFO    COPY finished in 9.4 s\n22:27:29 ERROR   shard reader lagging by 42 s\n07:03:09 INFO    batch committed, rows written 4987\n01:49:13 DEBUG   watermark advanced to 2026-02-14T03:00:0...\n21:27:26 INFO    dedupe key recomputed for 118 rows\n20:09:05 INFO    COPY finished in 9.4 s\n07:57:12 ERROR   COPY finished in 9.4 s\n20:53:05 INFO    COPY finished in 9.4 s\n16:47:13 ERROR   watermark advanced to 2026-02-14T03:00:0...\n04:07:16 INFO    COPY finished in 9.4 s\n19:30:50 WARNING COPY finished in 9.4 s\n10:01:20 WARNING dedupe key recomputed for 118 rows\n22:48:00 INFO    batch committed, rows written 4987\n06:33:00 WARNING lock acquired on analytics.order_events\n07:23:18 INFO    shard reader lagging by 42 s\n14:27:48 INFO    lock acquired on analytics.order_events\n15:51:23 INFO    lock acquired on analytics.order_events\n14:35:02 ERROR   batch committed, rows written 4987\n06:08:53 INFO    COPY finished in 9.4 s\n02:07:39 INFO    lock acquired on analytics.order_events\n07:59:32 WARNING watermark advanced to 2026-02-14T03:00:0...\n18:16:07 WARNING COPY finished in 9.4 s\n21:33:47 ERROR   lock acquired on analytics.order_events\n20:31:41 ERROR   watermark advanced to 2026-02-14T03:00:0...\n09:45:15 ERROR   watermark advanced to 2026-02-14T03:00:0...\n22:19:11 WARNING batch committed, rows written 4987\n09:48:21 INFO    dedupe key recomputed for 118 rows\n01:15:07 INFO    watermark advanced to 2026-02-14T03:00:0...\n09:07:15 DEBUG   COPY finished in 9.4 s",
+      "tool_call_id": "case-03-pipeline-migration-incident-tc013",
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m058",
+      "metadata": {},
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "No lock timeouts at 5000 rows, and the replica stays inside two seconds.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m059",
+      "metadata": {
+        "filler": "small_tool_run"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Let me check dags/order_events_backfill.py with `dbt run --select order_events`.",
+      "tool_call_id": null,
+      "tool_calls": [
+        {
+          "arguments": "{\"path\": \".\", \"pattern\": \"split_order_events\"}",
+          "id": "case-03-pipeline-migration-incident-tc014",
+          "name": "grep"
+        }
+      ]
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m060",
+      "metadata": {
+        "filler": "small_tool_run"
+      },
+      "name": "grep",
+      "pinned": false,
+      "role": "tool",
+      "text": "$ grep -rn --color=never airflow dags backfill order_events -s 2026-02-01 .\n18 matches\ntests/pipelines/test_order_events.py:138: connection.execute(co...\ntests/pipelines/test_order_events.py:673: if shard == 7:\nmigrations/20260214_003_split_order_events.sql:728: if shard ==...\npipelines/order_events/dedupe.py:868: with engine.begin() as co...\nscripts/rollback_order_events.py:378: connection.execute(copy_s...\nmigrations/20260214_003_split_order_events.sql:175: if shard ==...\npipelines/order_events/load.py:730: if shard == 7:\ntests/pipelines/test_order_events.py:96: connection.execute(cop...\npipelines/order_events/dedupe.py:517: with engine.begin() as co...\nmigrations/20260214_003_split_order_events.sql:383: connection....\ndags/order_events_backfill.py:470: loader.load(batch, table='an...\npipelines/order_events/dedupe.py:559: reader = replica_reader()\nmigrations/20260214_003_split_order_events.sql:818: connection....\nmigrations/20260214_003_split_order_events.sql:529: with engine...\nconfig/pipeline.yaml:234: if shard == 7:\npipelines/order_events/load.py:875: reader = replica_reader()\npipelines/order_events/dedupe.py:661: reader = replica_reader()\npipelines/order_events/dedupe.py:683: loader.load(batch, table=...",
+      "tool_call_id": "case-03-pipeline-migration-incident-tc014",
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m061",
+      "metadata": {
+        "filler": "duplicate",
+        "note": "near-duplicate of an earlier turn"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Watching the corrected backfill for one shard.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m062",
+      "metadata": {
+        "filler": "user_note"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "user",
+      "text": "Are we backfilling the whole month or only the shards that reported duplicates?",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m063",
+      "metadata": {
+        "filler": "boilerplate"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Running `python scripts/rollback_order_events.py --dry-run` now and reporting back; no other file changes in flight.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m064",
+      "metadata": {
+        "filler": "user_note"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "user",
+      "text": "Did anyone check the replica lag before shard 07 started?",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m065",
+      "metadata": {
+        "filler": "duplicate",
+        "note": "near-duplicate of an earlier turn"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Running `python scripts/rollback_order_events.py --dry-run` now and reporting back; no other file changes in flight.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m066",
+      "metadata": {
+        "todo_items": 4,
+        "todo_step": 2
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Board update before the runbook change.",
+      "tool_call_id": null,
+      "tool_calls": [
+        {
+          "arguments": "{\"todos\": [{\"content\": \"Quantify duplicates per shard\", \"id\": \"case-03-pipeline-migration-incident-todo00\", \"order\": 0, \"priority\": \"high\", \"status\": \"completed\"}, {\"content\": \"Identify the migration that rewrote the table\", \"id\": \"case-03-pipeline-migration-incident-todo01\", \"order\": 1, \"priority\": \"medium\", \"status\": \"completed\"}, {\"content\": \"Correct the backfill pacing\", \"id\": \"case-03-pipeline-migration-incident-todo02\", \"order\": 2, \"priority\": \"medium\", \"status\": \"completed\"}, {\"content\": \"Verify the rollback script on a copy\", \"id\": \"case-03-pipeline-migration-incident-todo03\", \"order\": 3, \"priority\": \"medium\", \"status\": \"in_progress\"}]}",
+          "id": "case-03-pipeline-migration-incident-tc015",
+          "name": "write_todos"
+        }
+      ]
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m067",
+      "metadata": {
+        "todo_step": 2
+      },
+      "name": "write_todos",
+      "pinned": false,
+      "role": "tool",
+      "text": "Todos updated: 4 items, 3 completed, 1 open.",
+      "tool_call_id": "case-03-pipeline-migration-incident-tc015",
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m068",
+      "metadata": {
+        "filler": "user_note"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "user",
+      "text": "Can we pause the DAG without losing the watermark?",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m069",
+      "metadata": {
+        "filler": "assistant_note"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Shard 07 is the only one that reads from the replica, which explains its lag. I re-read pipelines/order_events/dedupe.py around `run_backfill` before settling on that.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m070",
+      "metadata": {
+        "filler": "assistant_note"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "The backfill reuses one connection per batch and never resets the lock timeout. I re-read tests/pipelines/test_order_events.py around `shard_reader` before settling on that.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m071",
+      "metadata": {
+        "states_fact": "lock-timeout-var"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "For the runbook: the lock timeout is read from PIPELINE_LOCK_TIMEOUT_MS, and the default in config/pipeline.yaml is ignored when the variable is set.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m072",
+      "metadata": {
+        "filler": "boilerplate"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Running `psql -f migrations/20260214_003_split_order_events.sql` now and reporting back; no other file changes in flight.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m073",
+      "metadata": {
+        "filler": "assistant_note"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "The metrics CSV is exported per shard, and the export truncates the duplicate rate. I re-read config/pipeline.yaml around `OrderEventsLoader.load` before settling on that.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m074",
+      "metadata": {
+        "filler": "user_note"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "user",
+      "text": "Are we backfilling the whole month or only the shards that reported duplicates?",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m075",
+      "metadata": {
+        "filler": "assistant_note"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "The metrics CSV is exported per shard, and the export truncates the duplicate rate. I re-read config/pipeline.yaml around `run_backfill` before settling on that.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m076",
+      "metadata": {
+        "states_fact": "no-vacuum"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "user",
+      "text": "And whatever you do, never run VACUUM FULL on the production warehouse - it takes an exclusive lock and we would turn an incident into an outage.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m077",
+      "metadata": {
+        "filler": "boilerplate"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Running `airflow dags backfill order_events -s 2026-02-01` now and reporting back; no other file changes in flight.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m078",
+      "metadata": {
+        "filler": "duplicate",
+        "note": "near-duplicate of an earlier turn"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Running `airflow dags backfill order_events -s 2026-02-01` now and reporting back; no other file changes in flight.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m079",
+      "metadata": {
+        "filler": "assistant_note"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "The loader writes rows before the dedupe key is computed, so duplicates land first. I re-read tests/pipelines/test_order_events.py around `OrderEventsLoader.load` before settling on that.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m080",
+      "metadata": {
+        "filler": "boilerplate"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Running `dbt run --select order_events` now and reporting back; no other file changes in flight.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m081",
+      "metadata": {
+        "filler": "duplicate",
+        "note": "near-duplicate of an earlier turn"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "assistant",
+      "text": "Running `dbt run --select order_events` now and reporting back; no other file changes in flight.",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m082",
+      "metadata": {
+        "filler": "user_note"
+      },
+      "name": null,
+      "pinned": false,
+      "role": "user",
+      "text": "Did anyone check the replica lag before shard 07 started?",
+      "tool_call_id": null,
+      "tool_calls": []
+    },
+    {
+      "id": "case-03-pipeline-migration-incident-m083",
+      "metadata": {
+        "note": "user restates a constraint near the end",
+        "role_in_case": "contract"
+      },
+      "name": null,
+      "pinned": true,
+      "role": "user",
+      "text": "Every change to the pipeline goes through the dry-run script first, and the incident timeline stays in the channel; do not edit the DAG in place.",
+      "tool_call_id": null,
+      "tool_calls": []
+    }
+  ],
+  "metadata": {
+    "case_seed": 20261034,
+    "char_count": 156038,
+    "domain": "data-pipeline",
+    "fact_positions": {
+      "early": 2,
+      "late": 2,
+      "middle": 3
+    },
+    "facts_inside_tool_output": [
+      "worst-shard"
+    ],
+    "generator": "evals/generate_dataset.py",
+    "generator_version": 1,
+    "largest_tool_output_chars": 63339,
+    "largest_tool_output_lines": 1402,
+    "largest_tool_output_message": "case-03-pipeline-migration-incident-m039",
+    "message_count": 84,
+    "near_duplicate_messages": 11,
+    "notes": "Stresses a numeric decision that is first proposed wrong, and a single metric row buried in the middle of a CSV export above both truncation ceilings.",
+    "pinned_messages": 2,
+    "proxy_tokens": 39042,
+    "repeated_tool_calls": 6,
+    "seed": 20261031,
+    "todo_steps": 3,
+    "tool_results": 15,
+    "traps": 1
+  },
+  "probes": [
+    {
+      "aliases": [
+        "COPY",
+        "COPY instead of INSERT ... SELECT"
+      ],
+      "expected": "backfill with COPY, not INSERT ... SELECT",
+      "fact_id": "case-03-pipeline-migration-incident-f01",
+      "id": "case-03-pipeline-migration-incident-p00",
+      "question": "How did the team decide to load the backfill batches?"
+    },
+    {
+      "aliases": [
+        "5000",
+        "5000 rows per batch"
+      ],
+      "expected": "batch size 5000 with a 2 s sleep",
+      "fact_id": "case-03-pipeline-migration-incident-f03",
+      "id": "case-03-pipeline-migration-incident-p01",
+      "question": "What batch size did the team settle on for the backfill?"
+    },
+    {
+      "aliases": [
+        "0.0413",
+        "shard 07"
+      ],
+      "expected": "shard 07 peaked at a duplicate_rate of 0.0413",
+      "fact_id": "case-03-pipeline-migration-incident-f04",
+      "id": "case-03-pipeline-migration-incident-p02",
+      "question": "Which shard peaked at the highest duplicate rate, and at what value?"
+    },
+    {
+      "aliases": [
+        "VACUUM FULL"
+      ],
+      "expected": "never run VACUUM FULL on the production warehouse",
+      "fact_id": "case-03-pipeline-migration-incident-f06",
+      "id": "case-03-pipeline-migration-incident-p03",
+      "question": "Which maintenance command is forbidden on production during the incident?"
+    }
+  ],
+  "source": "synthetic",
+  "task": "Find why the order events pipeline duplicated rows, correct the backfill and write the rollback the on-call team can trust."
+}

@@ -1,0 +1,12 @@
+{
+  "cases": [
+    "case-01-api-service-debug",
+    "case-02-frontend-refactor",
+    "case-03-pipeline-migration-incident",
+    "case-04-flaky-ci-test",
+    "case-05-dependency-upgrade"
+  ],
+  "generator": "evals/generate_dataset.py@v1",
+  "name": "long_histories",
+  "seed": 20261031
+}

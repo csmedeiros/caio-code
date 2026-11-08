@@ -1,0 +1,122 @@
+{
+  "calibration": {
+    "_comment": "Médias MEDIDAS no piloto de case-01 (2026-11-07, scale 0.05). As contagens de blocos abaixo foram derivadas destas médias para que cada caso atinja o seu char_target com ~15% de sobra; convert.py consome em ordem e para no alvo.",
+    "char_mix": {
+      "assistant_turn": 0.15,
+      "tool_output": 0.78,
+      "user_turn": 0.07
+    },
+    "measured_mean_chars": {
+      "assistant_turn": 857,
+      "tool_output": 5377,
+      "user_turn": 387
+    },
+    "surplus_factor": 1.15
+  },
+  "cases": [
+    {
+      "chars": 514884,
+      "fact_positions": {
+        "early": 4,
+        "late": 4,
+        "middle": 4
+      },
+      "facts": 12,
+      "id": "case-01-api-service-debug",
+      "messages": 127,
+      "over_any_ceiling": 2,
+      "over_line_ceiling": 2,
+      "probes": 12,
+      "proxy_tokens": 129022,
+      "tool_outputs": 30,
+      "window_pressure": 4.03
+    },
+    {
+      "chars": 472403,
+      "fact_positions": {
+        "early": 4,
+        "late": 4,
+        "middle": 4
+      },
+      "facts": 12,
+      "id": "case-02-frontend-refactor",
+      "messages": 119,
+      "over_any_ceiling": 2,
+      "over_line_ceiling": 2,
+      "probes": 12,
+      "proxy_tokens": 118381,
+      "tool_outputs": 26,
+      "window_pressure": 3.7
+    },
+    {
+      "chars": 562302,
+      "fact_positions": {
+        "early": 4,
+        "late": 4,
+        "middle": 4
+      },
+      "facts": 12,
+      "id": "case-03-pipeline-migration-incident",
+      "messages": 96,
+      "over_any_ceiling": 2,
+      "over_line_ceiling": 2,
+      "probes": 12,
+      "proxy_tokens": 140827,
+      "tool_outputs": 25,
+      "window_pressure": 4.4
+    },
+    {
+      "chars": 455682,
+      "fact_positions": {
+        "early": 4,
+        "late": 4,
+        "middle": 4
+      },
+      "facts": 12,
+      "id": "case-04-flaky-ci-test",
+      "messages": 134,
+      "over_any_ceiling": 2,
+      "over_line_ceiling": 2,
+      "probes": 12,
+      "proxy_tokens": 114233,
+      "tool_outputs": 29,
+      "window_pressure": 3.57
+    },
+    {
+      "chars": 597097,
+      "fact_positions": {
+        "early": 4,
+        "late": 4,
+        "middle": 4
+      },
+      "facts": 12,
+      "id": "case-05-dependency-upgrade",
+      "messages": 221,
+      "over_any_ceiling": 2,
+      "over_line_ceiling": 2,
+      "probes": 12,
+      "proxy_tokens": 149744,
+      "tool_outputs": 44,
+      "window_pressure": 4.68
+    }
+  ],
+  "chars_per_token": 4,
+  "config_sha256": "81f6909813fa75e4ed5d80fb0db8d218625b816a9a35181d135d26d13003530a",
+  "dataset_name": "long_histories_128k",
+  "files_sha256": {
+    "case-01-api-service-debug.json": "05797f2e24c912056fc3fe8a5edea34efbdb1a6e186664cc40cc44b56ec105a9",
+    "case-02-frontend-refactor.json": "f1d77757be72ece91ad5d7592fbbbd1544566069c58ad279a539d79b223b0fe6",
+    "case-03-pipeline-migration-incident.json": "290b6833f624a49fb3e76a4a469ff8d03b16ede6778f819bd20695c83d7e14bc",
+    "case-04-flaky-ci-test.json": "31c26aa37d6b38465391dd0fef0931f204b8813749f22b2daedfc84bf7545b1c",
+    "case-05-dependency-upgrade.json": "e7593f92787f824ac09d4fafacf41c3e19d877f36f1faca76186fc32982474c4",
+    "dataset.json": "7fe9540432e3773446dcad548a83c55d4c3e066faca091b48a52b556df96b0e1"
+  },
+  "generator": "nemo-data-designer",
+  "models": {
+    "blocks": "qwen-flash",
+    "facts": "qwen-flash"
+  },
+  "reproducibility": "hash-pinned: a geração é dirigida por LLM e não é byte-reproduzível; o artefato versionado é a fonte de verdade.",
+  "seed": 20261107,
+  "window_tokens": 32000
+}
