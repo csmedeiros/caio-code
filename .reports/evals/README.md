@@ -25,7 +25,7 @@ zero errors, zero tool misses.
 Unlike v4, each trial is a replay with one shaping step followed by the case's 12 probes
 asked in-band to the same agent, which may call tools (cap 3 calls) against a recorded tool
 server; an LLM judge (`qwen3.8-flash`, `evals/prompts/judge_v1.md`) grades each answer
-without ever seeing the context. Calibration: 29/30 agreement (97%) against labels produced
+without ever seeing the context. Calibration: 28/30 agreement (93.3%) against the stored labels — 29/30 after fixing one mislabel, see `chapter4-main-v5-pilot/calibration-recheck.md` — against labels produced
 by two independent blind assistants — not the author — disclosed as a threat to validity.
 
 - `full` is the history as recorded; `spill` replaces tool outputs above

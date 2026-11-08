@@ -476,7 +476,7 @@ transbordante é semeado, a política do braço molda o contexto **uma vez**, e 
 perguntadas in-band ao mesmo agente, que pode chamar até 3 tools servidas pelo
 `ReplayToolServer`. A nota é binária, dada por um juiz LLM (`evals/prompts/judge_v1.md`,
 calibrado contra respostas rotuladas às cegas por dois subagentes independentes — não pelo
-autor, o que fica registrado como ameaça à validade; concordância 29/30 = 97%, portão de 90%)
+autor, o que fica registrado como ameaça à validade; concordância 28/30 = 93,3% com os labels como gravados — 29/30 após corrigir um label errado; portão de 90%)
 que nunca vê o contexto.
 Cinco braços (`REPLAY_ARMS`), duas variantes de caso (`full`/`spill` — a truncagem de saídas
 de tool para arquivo é fator de caso, não braço), matriz 5 × 5 × 2 × 1 = 50 trials
@@ -588,7 +588,7 @@ ADR é imutável: decisão superada ganha outro ADR, nunca edição do anterior.
 - [ ] Habilitar branch protection em `main` (PR obrigatório, CI verde, branch atualizada).
 - [x] Piloto do chat-replay (`chapter4-main-v5-pilot`, 10 trials, US$ 1.41) e calibração do
       juiz: 30 respostas rotuladas às cegas (dois subagentes independentes, unânimes; NÃO o
-      autor — registrado como ameaça à validade), concordância 29/30 = 97% (portão ≥ 90%).
+      autor — registrado como ameaça à validade), concordância 28/30 = 93,3% com os labels como gravados (29/30 após corrigir um label errado; portão ≥ 90%). Reconferência em `calibration-recheck.md`.
       `calibration-report.json` em `.reports/evals/chapter4-main-v5-pilot/`.
 - [x] Run completo `chapter4-main-v5` (`make evaluate-replay-live`, 50 trials, 2026-11-08,
       US$ 7.4246, zero erros; janela 40k, uma repetição, 5 braços x 5 casos x 2 variantes).
